@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Llama Hackaton Adventure - Nature Edition</title>
+    <title>Llama Hackaton Adventure - Fixed Edition</title>
     <link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap" rel="stylesheet">
     <style>
         :root {
@@ -321,7 +321,7 @@
 
         reset() {
             this.x = 50;
-            this.y = GAME_HEIGHT - 100;
+            this.y = GAME_HEIGHT - 150; // Empezar en el aire para caer seguro
             this.vx = 0;
             this.vy = 0;
             this.speed = 6;
@@ -332,7 +332,7 @@
         }
 
         respawn() {
-            this.x = Math.max(0, this.x - 300); 
+            this.x = Math.max(50, this.x - 200); 
             this.y = 0; 
             this.vx = 0;
             this.vy = 0;
@@ -366,11 +366,27 @@
             if (this.x > worldWidth - this.width) this.x = worldWidth - this.width;
 
             this.grounded = false;
+            
+            // Collision with Platforms
             platforms.forEach(platform => {
                 const dir = this.colCheck(this, platform);
-                if (dir === "b") { 
+                if (dir === "b") { // Bottom of Player Hit -> Landed
                     this.grounded = true;
                     this.vy = 0;
+                }
+            });
+
+            // Collision with Mystery Boxes
+            mysteryBoxes.forEach(box => {
+                if (box.active) {
+                    const dir = this.colCheck(this, box);
+                    if (dir === "b") { // Landed on box
+                        this.grounded = true;
+                        this.vy = 0;
+                    } else if (dir === "t") { // Hit head
+                        this.vy = 0; 
+                        triggerMysteryBox(box);
+                    }
                 }
             });
             
@@ -431,6 +447,7 @@
             ctx.restore();
         }
 
+        // CORRECCIÓN CRÍTICA: Lógica de colisión AABB
         colCheck(shapeA, shapeB) {
             const vX = (shapeA.x + (shapeA.width / 2)) - (shapeB.x + (shapeB.width / 2));
             const vY = (shapeA.y + (shapeA.height / 2)) - (shapeB.y + (shapeB.height / 2));
@@ -441,10 +458,27 @@
             if (Math.abs(vX) < hWidths && Math.abs(vY) < hHeights) {
                 const oX = hWidths - Math.abs(vX);
                 const oY = hHeights - Math.abs(vY);
+                
                 if (oX >= oY) {
-                    if (vY > 0) { colDir = "t"; shapeA.y += oY; } else { colDir = "b"; shapeA.y -= oY; }
+                    // Colisión Vertical
+                    if (vY > 0) { 
+                        // Player is BELOW Platform (vY positive) -> Hit Ceiling
+                        colDir = "t"; 
+                        shapeA.y += oY; 
+                    } else { 
+                        // Player is ABOVE Platform (vY negative) -> Landing
+                        colDir = "b"; 
+                        shapeA.y -= oY; 
+                    }
                 } else {
-                    if (vX > 0) { colDir = "l"; shapeA.x += oX; } else { colDir = "r"; shapeA.x -= oX; }
+                    // Colisión Horizontal
+                    if (vX > 0) { 
+                        colDir = "l"; // Hit left side of player
+                        shapeA.x += oX; 
+                    } else { 
+                        colDir = "r"; // Hit right side of player
+                        shapeA.x -= oX; 
+                    }
                 }
             }
             return colDir;
@@ -453,6 +487,7 @@
 
     let player = new Player();
     let platforms = [];
+    let mysteryBoxes = [];
     let letters = [];
     let particles = []; 
     let cameraX = 0;
@@ -484,6 +519,7 @@
 
     function initLevel(phraseText) {
         platforms = [];
+        mysteryBoxes = [];
         letters = [];
         particles = [];
         lives = MAX_LIVES;
@@ -495,45 +531,46 @@
 
         currentPhraseArray = phraseText.split('');
 
-        // Suelo Base Seguro
+        // Suelo Base Seguro (Largo para empezar)
         platforms.push(createPlatform(0, GAME_HEIGHT - 40, 600, 40));
 
         let currentX = 500; 
 
-        // Generar nivel basado en la frase
         currentPhraseArray.forEach((char, index) => {
             if (char === ' ') {
-                // Espacio: Crear suelo seguro abajo para caminar
                 platforms.push(createPlatform(currentX, GAME_HEIGHT - 40, 300, 40));
                 currentX += 300;
                 return; 
             }
 
-            const gap = 200 + Math.random() * 150; 
+            const gap = 150 + Math.random() * 100; 
             currentX += gap;
-            const yPos = 150 + Math.random() * 150; 
             
-            // Plataforma de la letra
-            platforms.push(createPlatform(currentX - 50, yPos + 40, 100, 20));
+            const challengeType = Math.random();
             
-            // Plataforma intermedia de seguridad (suelo abajo)
-            // Si la distancia es grande, ponemos una plataforma baja para rebotar
-            if (gap > 250) { 
-                 const midX = currentX - (gap/2);
-                 const groundY = GAME_HEIGHT - 80; // Cerca del fondo
-                 platforms.push(createPlatform(midX - 40, groundY, 80, 20));
+            if (challengeType < 0.5) {
+                // NORMAL
+                const yPos = 180 + Math.random() * 50; 
+                platforms.push(createPlatform(currentX - 50, yPos + 40, 120, 20));
+                if (gap > 200) platforms.push(createPlatform(currentX - (gap/2) - 40, yPos + 80, 80, 20));
+                
+                letters.push({ char, targetIndex: index, x: currentX - 10, y: yPos, width: 20, height: 20, collected: false });
+            
+            } else {
+                // BLOQUE MISTERIOSO
+                const yPos = 220; 
+                platforms.push(createPlatform(currentX - 50, yPos + 40, 120, 20));
+                
+                mysteryBoxes.push({
+                    x: currentX - 15,
+                    y: yPos - 90, 
+                    width: 30,
+                    height: 30,
+                    active: true,
+                    char: char,
+                    targetIndex: index
+                });
             }
-
-            // Añadir Letra
-            letters.push({
-                char: char, 
-                targetIndex: index, 
-                x: currentX - 10, 
-                y: yPos, 
-                width: 20, 
-                height: 20, 
-                collected: false
-            });
         });
 
         const finalX = currentX + 300;
@@ -568,6 +605,22 @@
             }
         }
         return { x, y, width: w, height: h, flowers: flowers };
+    }
+
+    function triggerMysteryBox(box) {
+        if(!box.active) return;
+        box.active = false; 
+        
+        particles.push({
+            x: box.x + 5, 
+            y: box.y - 20,
+            vx: 0, vy: -2, life: 60, 
+            color: '#FFF', text: box.char, isText: true
+        });
+
+        collectedIndices.add(box.targetIndex);
+        const slot = document.getElementById(`slot-${box.targetIndex}`);
+        if(slot) slot.classList.add('collected');
     }
 
     function loseLife() {
@@ -635,7 +688,7 @@
             particles.push({
                 x: letter.x + 10, y: letter.y + 10,
                 vx: (Math.random() - 0.5) * 10, vy: (Math.random() - 0.5) * 10,
-                life: 30, color: PALETTE.sun
+                life: 30, color: PALETTE.sun, isText: false
             });
         }
     }
@@ -664,7 +717,6 @@
         ctx.fillStyle = grad;
         ctx.fillRect(0, 0, VIEWPORT_WIDTH, GAME_HEIGHT);
 
-        // Sol estático
         ctx.fillStyle = PALETTE.sun;
         ctx.beginPath();
         ctx.arc(150, 100, 40, 0, Math.PI*2);
@@ -703,13 +755,10 @@
 
     function draw() {
         ctx.clearRect(0, 0, canvas.width, canvas.height);
-        
-        // Dibujamos el fondo SIEMPRE, incluso en el menú
         drawSunsetBackground();
         drawSolidMountainLandscape();
         drawFogOverlay();
 
-        // Si estamos en el menú, paramos aquí
         if (gameState === "MENU") return;
 
         ctx.save();
@@ -730,7 +779,29 @@
             });
         });
 
-        // Bandera
+       
+        mysteryBoxes.forEach(box => {
+            if (box.active) {
+                
+                ctx.fillStyle = '#FFD700';
+                ctx.fillRect(box.x, box.y, box.width, box.height);
+                
+                ctx.lineWidth = 2;
+                ctx.strokeStyle = '#B8860B';
+                ctx.strokeRect(box.x, box.y, box.width, box.height);
+                
+                ctx.fillStyle = '#000';
+                ctx.font = "bold 20px monospace";
+                ctx.fillText("?", box.x + 8, box.y + 22);
+            } else {
+                
+                ctx.fillStyle = '#5D4037';
+                ctx.fillRect(box.x, box.y, box.width, box.height);
+                ctx.strokeStyle = '#3E2723';
+                ctx.strokeRect(box.x, box.y, box.width, box.height);
+            }
+        });
+
         ctx.fillStyle = '#333';
         ctx.fillRect(finalFlag.x, finalFlag.y - 120, 6, 120);
         const wave = Math.sin(Date.now() / 200) * 5;
@@ -741,7 +812,7 @@
         ctx.fillStyle = '#D91023';
         ctx.fillRect(finalFlag.x + 26, finalFlag.y - 120 + wave, 10, 60 + wave); 
 
-        // Letras
+        
         ctx.font = "bold 24px 'Press Start 2P'"; 
         ctx.textAlign = "center";
         letters.forEach(l => {
@@ -755,17 +826,24 @@
             }
         });
 
-        // Partículas
+       
         particles.forEach((p, index) => {
             p.life--;
             p.x += p.vx;
             p.y += p.vy;
-            ctx.fillStyle = p.color;
-            ctx.fillRect(p.x, p.y, 4, 4);
+            
+            if(p.isText) {
+                ctx.fillStyle = '#FFF';
+                ctx.font = "bold 20px monospace";
+                ctx.fillText(p.text, p.x, p.y);
+            } else {
+                ctx.fillStyle = p.color;
+                ctx.fillRect(p.x, p.y, 4, 4);
+            }
+            
             if(p.life <= 0) particles.splice(index, 1);
         });
 
-        // Indicador de ayuda
         const requiredLetters = currentPhraseArray.filter(c => c !== ' ').length;
         if (player.x + player.width > finalFlag.x - 300 && collectedIndices.size < requiredLetters) {
             ctx.fillStyle = "#FFF";
@@ -777,16 +855,12 @@
         ctx.restore();
     }
     
-    // --- BUCLE PRINCIPAL (FIXED) ---
     function loop() {
         update();
         draw();
-        // Siempre solicitamos el siguiente frame, para que la animación del fondo
-        // o las interacciones funcionen siempre, incluso en el menú.
         requestAnimationFrame(loop);
     }
 
-    // Inputs
     window.addEventListener('keydown', e => {
         if(keys.hasOwnProperty(e.code) || e.code === 'Space') {
             keys[e.code === 'Space' ? 'Space' : e.code] = true;
@@ -800,7 +874,6 @@
         }
     });
 
-    // Iniciar
     showMenu();
     loop();
 
