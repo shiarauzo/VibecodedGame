@@ -8,6 +8,7 @@
     <style>
         :root {
             --bg-color: #2E1A47;
+            --menu-bg: rgba(46, 26, 71, 0.95);
         }
 
         body {
@@ -22,16 +23,22 @@
             height: 100vh;
             overflow: hidden;
         }
-        #game-container {
+        #game-wrapper {
             position: relative;
-            border: 4px solid #FFD700;
+            width: 800px;
+            height: 400px;
             box-shadow: 0 0 30px rgba(255, 140, 0, 0.3);
+            border: 4px solid #FFD700;
         }
         canvas {
             background-color: var(--bg-color);
             display: block;
             image-rendering: pixelated;
+            width: 100%;
+            height: 100%;
         }
+        
+        /* UI SUPERIOR (HUD) */
         #ui-layer {
             position: absolute;
             top: 20px;
@@ -40,23 +47,32 @@
             display: flex;
             justify-content: space-between;
             pointer-events: none;
+            z-index: 10;
         }
         
         #letters-container {
             display: flex;
             gap: 4px;
+            flex-wrap: wrap;
+            max-width: 600px;
         }
         .letter-slot {
-            width: 25px;
-            height: 35px;
+            width: 20px; 
+            height: 30px;
             background: rgba(0, 0, 0, 0.4);
             border: 2px solid #CD853F;
             display: flex;
             align-items: center;
             justify-content: center;
-            font-size: 16px;
+            font-size: 14px;
             color: #ccc;
             text-shadow: none;
+            margin-bottom: 2px;
+        }
+        .letter-slot.space {
+            border: none;
+            background: transparent;
+            width: 10px;
         }
         .letter-slot.collected {
             background: #FFD700;
@@ -101,18 +117,67 @@
             100% { transform: scale(1); }
         }
 
-        .modal-screen {
+        /* PANTALLAS (MENU, WIN, LOSE) */
+        .screen-overlay {
             position: absolute;
-            top: 50%;
-            left: 50%;
-            transform: translate(-50%, -50%);
-            background: rgba(46, 26, 71, 0.95);
-            padding: 40px;
-            text-align: center;
-            display: none;
-            border: 4px solid #FFD700;
-            min-width: 400px;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: var(--menu-bg);
+            display: flex; 
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            z-index: 20;
         }
+
+        /* MENÚ PRINCIPAL */
+        #main-menu {
+            display: flex;
+        }
+        .level-grid {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 25px;
+            margin-top: 30px;
+        }
+        .level-btn {
+            background: #CD853F;
+            border: 3px solid #FFD700;
+            color: #fff;
+            width: 70px;
+            height: 70px;
+            font-family: 'Press Start 2P', monospace;
+            font-size: 24px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            text-align: center;
+            box-shadow: 6px 6px 0px #5A3A22;
+            transition: transform 0.1s, background 0.1s;
+        }
+        .level-btn:hover {
+            background: #FFD700;
+            color: #000;
+            transform: translate(-2px, -2px);
+            box-shadow: 8px 8px 0px #5A3A22;
+        }
+        .level-btn:active {
+            transform: translate(2px, 2px);
+            box-shadow: 2px 2px 0px #5A3A22;
+        }
+
+        /* MODALES WIN/LOSE */
+        .modal-content {
+            text-align: center;
+            border: 4px solid #FFD700;
+            padding: 40px;
+            background: rgba(0,0,0,0.8);
+            max-width: 500px;
+        }
+        
         .btn-pixel {
             margin-top: 20px;
             padding: 15px 30px;
@@ -135,14 +200,19 @@
             color: #fff;
             text-shadow: 1px 1px 0 #000;
         }
+
+        .hidden {
+            display: none !important;
+        }
     </style>
 </head>
 <body>
 
-    <div id="game-container">
+    <div id="game-wrapper">
         <canvas id="gameCanvas" width="800" height="400"></canvas>
         
-        <div id="ui-layer">
+        <!-- UI JUEGO -->
+        <div id="ui-layer" class="hidden">
             <div id="letters-container"></div>
             <div id="status-panel">
                 <div id="lives-display"></div>
@@ -150,17 +220,34 @@
             </div>
         </div>
 
-        <div id="win-screen" class="modal-screen">
-            <h1 style="color: #FFD700; margin-bottom: 20px;">¡CUSCO CONQUISTADO!</h1>
-            <p style="font-size: 12px; color: #FFA500;">MACHU PICCHU ALCANZADO</p>
-            <p id="final-time" style="color: #fff; margin: 20px 0;">TIEMPO: 0.00s</p>
-            <button class="btn-pixel" onclick="location.reload()">JUGAR DE NUEVO</button>
+        <!-- MENÚ PRINCIPAL -->
+        <div id="main-menu" class="screen-overlay">
+            <h1 style="color: #FFD700; margin-bottom: 10px; font-size: 28px; text-shadow: 4px 4px #000;">LLAMA ADVENTURE</h1>
+            <p style="color: #ccc; font-size: 12px; margin-bottom: 10px;">SELECCIONA NIVEL</p>
+            <div class="level-grid" id="level-grid">
+                <!-- Se genera con JS -->
+            </div>
         </div>
 
-        <div id="lose-screen" class="modal-screen">
-            <h1 style="color: #FF4500; margin-bottom: 20px;">GAME OVER</h1>
-            <p style="font-size: 12px; color: #aaa;">Inténtalo otra vez</p>
-            <button class="btn-pixel" onclick="location.reload()">REINTENTAR</button>
+        <!-- PANTALLA GANAR -->
+        <div id="win-screen" class="screen-overlay hidden">
+            <div class="modal-content">
+                <h1 style="color: #FFD700; margin-bottom: 20px; font-size: 20px;">¡LOGRO OBTENIDO!</h1>
+                <p style="font-size: 12px; color: #FFA500;" id="win-subtitle">NIVEL COMPLETADO</p>
+                <p id="final-time" style="color: #fff; margin: 20px 0;">TIEMPO: 0.00s</p>
+                <button class="btn-pixel" onclick="showMenu()">MENÚ PRINCIPAL</button>
+            </div>
+        </div>
+
+        <!-- PANTALLA PERDER -->
+        <div id="lose-screen" class="screen-overlay hidden">
+            <div class="modal-content">
+                <h1 style="color: #FF4500; margin-bottom: 20px;">GAME OVER</h1>
+                <p style="font-size: 12px; color: #aaa;">La llama se perdió...</p>
+                <button class="btn-pixel" onclick="restartLevel()">REINTENTAR</button>
+                <br><br>
+                <button class="btn-pixel" style="font-size: 10px; padding: 10px;" onclick="showMenu()">MENÚ</button>
+            </div>
         </div>
     </div>
     <div id="controls-hint">[FLECHAS] MOVER • [ESPACIO] SALTAR</div>
@@ -171,48 +258,70 @@
     
     ctx.imageSmoothingEnabled = false;
 
-    // Configuración del juego
+    // Configuración Constante
     const VIEWPORT_WIDTH = 800;
     const GAME_HEIGHT = 400;
-    const WORLD_WIDTH = 8500; 
     const GRAVITY = 0.6;
     const MAX_LIVES = 3;
     
+    // Niveles
+    const LEVELS = [
+        "CRAFTER STATION",
+        "IA PLAYGROUNDS",
+        "START HACK PERU",
+        "YAVENDIO!",
+        "INSPIRA TECH",
+        "HACKEANDO PRODUCTOS"
+    ];
+
     const PALETTE = {
         skyTop: '#332211',
         skyBottom: '#CC6600',
         sun: '#FFD700',
-        mountainDistant: '#2F4F4F', // DarkSlateGray
-        mountainMid: '#5A4D41',     // Marrón grisáceo sólido
-        ruinHighlight: '#8B4513',
-        ruinShadow: '#3E2723',
-        grass: '#4CAF50',           // Verde pasto
-        grassLight: '#81C784',      // Brillo pasto
-        dirt: '#5D4037',            // Tierra
-        flowerColors: ['#FFC0CB', '#FFD700', '#E0FFFF', '#FF69B4'] // Rosa, Oro, Cian, HotPink
+        mountainDistant: '#2F4F4F', 
+        mountainMid: '#5A4D41',     
+        grass: '#4CAF50',           
+        grassLight: '#81C784',      
+        dirt: '#5D4037',            
+        flowerColors: ['#FFC0CB', '#FFD700', '#E0FFFF', '#FF69B4'] 
     };
 
-    const TARGET_PHRASE = "IAHACKATONPERU".split('');
+    // Estado del juego
+    let currentPhrase = "";
+    let currentPhraseArray = [];
     let collectedIndices = new Set();
-    
-    // Estado
     let gameStartTime = 0;
-    let gameEnded = false;
+    let gameState = "MENU"; // MENU, PLAYING, WON, LOST
     let lives = MAX_LIVES;
     let finalFlag = { x: 0, y: 0 };
-    
+    let worldWidth = 8500; 
+
     const keys = {
         ArrowRight: false, ArrowLeft: false, Space: false, ArrowUp: false
     };
 
+    // --- SETUP MENU ---
+    const menuGrid = document.getElementById('level-grid');
+    LEVELS.forEach((levelName, index) => {
+        const btn = document.createElement('div');
+        btn.className = 'level-btn';
+        btn.innerText = index + 1;
+        btn.onclick = () => startGame(levelName);
+        menuGrid.appendChild(btn);
+    });
+
+    // --- CLASES ---
     class Player {
         constructor() {
             this.width = 40;
             this.height = 40;
-            this.startX = 100;
-            this.startY = GAME_HEIGHT - 100;
-            this.x = this.startX;
-            this.y = this.startY;
+            this.reset();
+            this.color = '#FFFFFF'; 
+        }
+
+        reset() {
+            this.x = 50;
+            this.y = GAME_HEIGHT - 100;
             this.vx = 0;
             this.vy = 0;
             this.speed = 6;
@@ -220,7 +329,6 @@
             this.grounded = false;
             this.facingRight = true;
             this.invulnerable = false;
-            this.color = '#FFFFFF'; // LLAMA BLANCA
         }
 
         respawn() {
@@ -233,7 +341,7 @@
         }
 
         update() {
-            if (gameEnded) return;
+            if (gameState !== "PLAYING") return;
 
             if (keys.ArrowRight) {
                 this.vx = this.speed;
@@ -255,7 +363,7 @@
             this.y += this.vy;
 
             if (this.x < 0) this.x = 0;
-            if (this.x > WORLD_WIDTH - this.width) this.x = WORLD_WIDTH - this.width;
+            if (this.x > worldWidth - this.width) this.x = worldWidth - this.width;
 
             this.grounded = false;
             platforms.forEach(platform => {
@@ -269,7 +377,9 @@
             if (this.y > GAME_HEIGHT) loseLife();
 
             if (this.x + this.width > finalFlag.x && this.x < finalFlag.x + 20) {
-                if (this.y > finalFlag.y - 100 && collectedIndices.size === TARGET_PHRASE.length) {
+                // Check win condition
+                const requiredLetters = currentPhraseArray.filter(c => c !== ' ').length;
+                if (this.y > finalFlag.y - 100 && collectedIndices.size === requiredLetters) {
                     finishGame(true);
                 }
             }
@@ -280,12 +390,12 @@
             ctx.translate(Math.floor(this.x + this.width/2), Math.floor(this.y + this.height/2));
             if (!this.facingRight) ctx.scale(-1, 1);
             
-            // Cuerpo Blanco (Mejor contraste)
+            // Cuerpo Blanco
             ctx.fillStyle = this.color;
             ctx.fillRect(-20, -10, 40, 20);
             
             // Patas
-            ctx.fillStyle = '#EEE'; // Gris muy claro para patas
+            ctx.fillStyle = '#EEE'; 
             if (Math.abs(this.vx) > 0.5 && !this.grounded === false) {
                 const walk = Math.sin(Date.now() / 100) * 10;
                 ctx.fillRect(-18 + walk, 10, 8, 15);
@@ -310,12 +420,12 @@
             ctx.fillStyle = 'white';
             ctx.fillRect(15, -25, 2, 2);
             
-            // Manta peruana (Colores vivos)
-            ctx.fillStyle = '#D500F9'; // Violeta neon
+            // Manta peruana
+            ctx.fillStyle = '#D500F9'; 
             ctx.fillRect(-10, -10, 5, 20);
-            ctx.fillStyle = '#00E676'; // Verde neon
+            ctx.fillStyle = '#00E676'; 
             ctx.fillRect(-5, -10, 5, 20);
-            ctx.fillStyle = '#FF3D00'; // Rojo neon
+            ctx.fillStyle = '#FF3D00'; 
             ctx.fillRect(0, -10, 5, 20);
 
             ctx.restore();
@@ -347,62 +457,110 @@
     let particles = []; 
     let cameraX = 0;
 
-    function initLevel() {
+    // --- GAME LOGIC ---
+
+    function showMenu() {
+        gameState = "MENU";
+        document.getElementById('main-menu').classList.remove('hidden');
+        document.getElementById('ui-layer').classList.add('hidden');
+        document.getElementById('win-screen').classList.add('hidden');
+        document.getElementById('lose-screen').classList.add('hidden');
+    }
+
+    function startGame(phrase) {
+        currentPhrase = phrase;
+        initLevel(phrase);
+        
+        gameState = "PLAYING";
+        document.getElementById('main-menu').classList.add('hidden');
+        document.getElementById('ui-layer').classList.remove('hidden');
+        document.getElementById('win-screen').classList.add('hidden');
+        document.getElementById('lose-screen').classList.add('hidden');
+    }
+
+    function restartLevel() {
+        startGame(currentPhrase);
+    }
+
+    function initLevel(phraseText) {
         platforms = [];
         letters = [];
         particles = [];
         lives = MAX_LIVES;
-        gameEnded = false;
         collectedIndices.clear();
         gameStartTime = Date.now();
+        player.reset();
         
-        document.getElementById('win-screen').style.display = 'none';
-        document.getElementById('lose-screen').style.display = 'none';
         updateLivesUI();
 
-        // Suelo Base Seguro con generador de flores pseudo-aleatorio
+        currentPhraseArray = phraseText.split('');
+
+        // Suelo Base Seguro
         platforms.push(createPlatform(0, GAME_HEIGHT - 40, 600, 40));
 
-        const phrase = TARGET_PHRASE;
         let currentX = 500; 
 
-        phrase.forEach((char, index) => {
+        // Generar nivel basado en la frase
+        currentPhraseArray.forEach((char, index) => {
+            if (char === ' ') {
+                // Espacio: Crear suelo seguro abajo para caminar
+                platforms.push(createPlatform(currentX, GAME_HEIGHT - 40, 300, 40));
+                currentX += 300;
+                return; 
+            }
+
             const gap = 200 + Math.random() * 150; 
             currentX += gap;
             const yPos = 150 + Math.random() * 150; 
             
+            // Plataforma de la letra
             platforms.push(createPlatform(currentX - 50, yPos + 40, 100, 20));
             
-            if (gap > 300 || yPos < 150) {
-                 platforms.push(createPlatform(currentX - (gap/2) - 40, yPos + 100, 60, 20));
+            // Plataforma intermedia de seguridad (suelo abajo)
+            // Si la distancia es grande, ponemos una plataforma baja para rebotar
+            if (gap > 250) { 
+                 const midX = currentX - (gap/2);
+                 const groundY = GAME_HEIGHT - 80; // Cerca del fondo
+                 platforms.push(createPlatform(midX - 40, groundY, 80, 20));
             }
+
+            // Añadir Letra
             letters.push({
-                char: char, targetIndex: index, x: currentX - 10, y: yPos, width: 20, height: 20, collected: false
+                char: char, 
+                targetIndex: index, 
+                x: currentX - 10, 
+                y: yPos, 
+                width: 20, 
+                height: 20, 
+                collected: false
             });
         });
 
         const finalX = currentX + 300;
         platforms.push(createPlatform(finalX, GAME_HEIGHT - 60, 400, 60)); 
         finalFlag = { x: finalX + 200, y: GAME_HEIGHT - 60 };
+        worldWidth = finalX + 600;
 
         const uiContainer = document.getElementById('letters-container');
         uiContainer.innerHTML = '';
-        TARGET_PHRASE.forEach((char, i) => {
+        currentPhraseArray.forEach((char, i) => {
             const div = document.createElement('div');
             div.className = 'letter-slot';
-            div.id = `slot-${i}`;
-            div.innerText = char;
+            if (char === ' ') {
+                div.className += ' space';
+            } else {
+                div.id = `slot-${i}`;
+                div.innerText = char;
+            }
             uiContainer.appendChild(div);
         });
     }
 
-    // Helper para crear plataforma con decoración (flores) precalculada
     function createPlatform(x, y, w, h) {
         let flowers = [];
-        // Generar flores aleatorias sobre la superficie
         const numFlowers = Math.floor(w / 20);
         for(let i=0; i<numFlowers; i++) {
-            if(Math.random() > 0.6) { // 40% chance de flor
+            if(Math.random() > 0.6) { 
                 flowers.push({
                     x: (Math.random() * w),
                     color: PALETTE.flowerColors[Math.floor(Math.random() * PALETTE.flowerColors.length)]
@@ -421,8 +579,13 @@
         flash.style.background = 'rgba(255, 69, 0, 0.4)';
         document.body.appendChild(flash);
         setTimeout(() => flash.remove(), 100);
-        if (lives <= 0) finishGame(false);
-        else player.respawn();
+        
+        if (lives <= 0) {
+            gameState = "LOST";
+            document.getElementById('lose-screen').classList.remove('hidden');
+        } else {
+            player.respawn();
+        }
     }
 
     function updateLivesUI() {
@@ -436,16 +599,17 @@
     }
 
     function update() {
-        if (!gameEnded) {
-            const now = Date.now();
-            const diff = (now - gameStartTime) / 1000;
-            document.getElementById('timer-display').innerText = "TIEMPO: " + diff.toFixed(2);
-        }
+        if (gameState !== "PLAYING") return;
+
+        const now = Date.now();
+        const diff = (now - gameStartTime) / 1000;
+        document.getElementById('timer-display').innerText = "TIEMPO: " + diff.toFixed(2);
+
         player.update();
         
         cameraX = player.x - 200;
         if (cameraX < 0) cameraX = 0;
-        if (cameraX > WORLD_WIDTH - VIEWPORT_WIDTH) cameraX = WORLD_WIDTH - VIEWPORT_WIDTH;
+        if (cameraX > worldWidth - VIEWPORT_WIDTH) cameraX = worldWidth - VIEWPORT_WIDTH;
 
         letters.forEach(letter => {
             if (!letter.collected) {
@@ -463,7 +627,9 @@
         if(letter.collected) return;
         letter.collected = true;
         collectedIndices.add(letter.targetIndex);
-        document.getElementById(`slot-${letter.targetIndex}`).classList.add('collected');
+        
+        const slot = document.getElementById(`slot-${letter.targetIndex}`);
+        if(slot) slot.classList.add('collected');
         
         for(let i=0; i<10; i++) {
             particles.push({
@@ -475,21 +641,23 @@
     }
 
     function finishGame(win) {
-        if (gameEnded) return;
-        gameEnded = true;
+        if (gameState !== "PLAYING") return;
+        
+        gameState = win ? "WON" : "LOST";
+        
         if (win) {
             const now = Date.now();
             const diff = (now - gameStartTime) / 1000;
             document.getElementById('final-time').innerText = "TIEMPO: " + diff.toFixed(2) + "s";
-            document.getElementById('win-screen').style.display = 'block';
+            document.getElementById('win-subtitle').innerText = `"${currentPhrase}" COMPLETADO`;
+            document.getElementById('win-screen').classList.remove('hidden');
         } else {
-            document.getElementById('lose-screen').style.display = 'block';
+            document.getElementById('lose-screen').classList.remove('hidden');
         }
     }
 
-    // --- FONDO SÓLIDO Y ESTÁTICO (Estilo Ilustración Larga) ---
+    // --- RENDER ---
     function drawSunsetBackground() {
-        // Cielo degradado simple
         const grad = ctx.createLinearGradient(0, 0, 0, GAME_HEIGHT);
         grad.addColorStop(0, PALETTE.skyTop);
         grad.addColorStop(1, PALETTE.skyBottom);
@@ -504,36 +672,24 @@
     }
 
     function drawSolidMountainLandscape() {
-        // Para que se sienta como una "imagen larga", mapeamos directamente el worldX
-        // y dibujamos formas poligonales grandes.
-        
-        // Capa 1: Montañas lejanas (Fijas al fondo, se mueven lento)
         ctx.fillStyle = PALETTE.mountainDistant;
         ctx.beginPath();
         ctx.moveTo(0, GAME_HEIGHT);
-        
-        // Iteramos por la pantalla pero calculamos ruido basado en worldX
         for(let x = 0; x <= VIEWPORT_WIDTH; x+=10) {
             let parallaxX = x + (cameraX * 0.2); 
-            // Ruido suave
             let h = 150 + Math.sin(parallaxX * 0.003) * 100 + Math.sin(parallaxX * 0.01) * 20;
             ctx.lineTo(x, GAME_HEIGHT - h);
         }
         ctx.lineTo(VIEWPORT_WIDTH, GAME_HEIGHT);
         ctx.fill();
 
-        // Capa 2: Ruinas/Montañas medias (Más cerca, más detalle, movimiento medio)
         ctx.fillStyle = PALETTE.mountainMid;
         ctx.beginPath();
         ctx.moveTo(0, GAME_HEIGHT);
         for(let x = 0; x <= VIEWPORT_WIDTH; x+=10) {
             let parallaxX = x + (cameraX * 0.5); 
-            // Ruido más anguloso para ruinas
             let h = 80 + Math.abs(Math.sin(parallaxX * 0.005)) * 150;
-            
-            // Simular terrazas
             if (h > 100) h = Math.floor(h / 20) * 20;
-
             ctx.lineTo(x, GAME_HEIGHT - h);
         }
         ctx.lineTo(VIEWPORT_WIDTH, GAME_HEIGHT);
@@ -541,7 +697,6 @@
     }
 
     function drawFogOverlay() {
-        // Filtro suave para unificar colores
         ctx.fillStyle = 'rgba(60, 30, 10, 0.2)';
         ctx.fillRect(0, 0, VIEWPORT_WIDTH, GAME_HEIGHT);
     }
@@ -549,38 +704,33 @@
     function draw() {
         ctx.clearRect(0, 0, canvas.width, canvas.height);
         
-        // 1. Fondo
+        // Dibujamos el fondo SIEMPRE, incluso en el menú
         drawSunsetBackground();
         drawSolidMountainLandscape();
-        drawFogOverlay(); // Blur/Opacidad visual
+        drawFogOverlay();
+
+        // Si estamos en el menú, paramos aquí
+        if (gameState === "MENU") return;
 
         ctx.save();
         ctx.translate(-cameraX, 0);
 
-        // Plataformas con PASTO y FLORES
         platforms.forEach(p => {
-            // Parte inferior (Tierra)
             ctx.fillStyle = PALETTE.dirt;
             ctx.fillRect(p.x, p.y + 10, p.width, p.height - 10);
-            
-            // Parte superior (Pasto)
             ctx.fillStyle = PALETTE.grass;
             ctx.fillRect(p.x, p.y, p.width, 10);
-            
-            // Borde pasto claro
             ctx.fillStyle = PALETTE.grassLight;
             ctx.fillRect(p.x, p.y, p.width, 3);
-
-            // Flores
             p.flowers.forEach(f => {
                 ctx.fillStyle = f.color;
-                ctx.fillRect(p.x + f.x, p.y - 4, 4, 4); // Flor pixel
-                ctx.fillStyle = '#2E7D32'; // Tallo
+                ctx.fillRect(p.x + f.x, p.y - 4, 4, 4); 
+                ctx.fillStyle = '#2E7D32'; 
                 ctx.fillRect(p.x + f.x + 1, p.y, 2, 2);
             });
         });
 
-        // Bandera Final
+        // Bandera
         ctx.fillStyle = '#333';
         ctx.fillRect(finalFlag.x, finalFlag.y - 120, 6, 120);
         const wave = Math.sin(Date.now() / 200) * 5;
@@ -615,17 +765,28 @@
             if(p.life <= 0) particles.splice(index, 1);
         });
 
+        // Indicador de ayuda
+        const requiredLetters = currentPhraseArray.filter(c => c !== ' ').length;
+        if (player.x + player.width > finalFlag.x - 300 && collectedIndices.size < requiredLetters) {
+            ctx.fillStyle = "#FFF";
+            ctx.font = "12px 'Press Start 2P'"; 
+            ctx.fillText("FALTAN LETRAS", player.x + 20, player.y - 30);
+        }
+
         player.draw();
         ctx.restore();
-        
-        requestAnimationFrame(loop);
     }
     
+    // --- BUCLE PRINCIPAL (FIXED) ---
     function loop() {
         update();
         draw();
+        // Siempre solicitamos el siguiente frame, para que la animación del fondo
+        // o las interacciones funcionen siempre, incluso en el menú.
+        requestAnimationFrame(loop);
     }
 
+    // Inputs
     window.addEventListener('keydown', e => {
         if(keys.hasOwnProperty(e.code) || e.code === 'Space') {
             keys[e.code === 'Space' ? 'Space' : e.code] = true;
@@ -639,7 +800,8 @@
         }
     });
 
-    initLevel();
+    // Iniciar
+    showMenu();
     loop();
 
 </script>
