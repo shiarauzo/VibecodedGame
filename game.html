@@ -3,15 +3,18 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Llama Hackaton Adventure - Cyber Edition</title>
-    <!-- Fuente Pixelada -->
+    <title>Llama Hackaton Adventure - Nature Edition</title>
     <link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap" rel="stylesheet">
     <style>
+        :root {
+            --bg-color: #2E1A47;
+        }
+
         body {
             margin: 0;
-            background-color: #050505;
-            color: #f0f0f0;
-            font-family: 'Press Start 2P', 'Courier New', monospace;
+            background-color: #111;
+            color: white;
+            font-family: 'Press Start 2P', monospace;
             display: flex;
             flex-direction: column;
             align-items: center;
@@ -21,15 +24,14 @@
         }
         #game-container {
             position: relative;
-            border: 4px solid #333;
-            box-shadow: 0 0 40px rgba(255, 255, 0, 0.1); /* Brillo amarillo sutil */
+            border: 4px solid #FFD700;
+            box-shadow: 0 0 30px rgba(255, 140, 0, 0.3);
         }
         canvas {
-            background-color: #0a0a0a;
+            background-color: var(--bg-color);
             display: block;
             image-rendering: pixelated;
         }
-        /* UI SUPERIOR */
         #ui-layer {
             position: absolute;
             top: 20px;
@@ -47,23 +49,21 @@
         .letter-slot {
             width: 25px;
             height: 35px;
-            background: rgba(255, 255, 255, 0.1);
-            border: 2px solid #555;
+            background: rgba(0, 0, 0, 0.4);
+            border: 2px solid #CD853F;
             display: flex;
             align-items: center;
             justify-content: center;
             font-size: 16px;
-            color: #333;
+            color: #ccc;
             text-shadow: none;
         }
-        /* Sombra Amarilla solicitada */
         .letter-slot.collected {
-            background: #fff;
-            border-color: #FFFF00;
+            background: #FFD700;
+            border-color: #FFF;
             color: #000;
-            box-shadow: 0 0 15px #FFFF00;
+            box-shadow: 0 0 10px #FFD700;
             animation: pop 0.3s steps(2);
-            font-weight: bold;
         }
 
         #status-panel {
@@ -74,7 +74,7 @@
         }
         #timer-display {
             font-size: 16px;
-            color: #fff;
+            color: #FFD700;
             text-shadow: 2px 2px #000;
         }
         #lives-display {
@@ -84,7 +84,7 @@
         .heart {
             width: 20px;
             height: 20px;
-            background-color: #FF0033;
+            background-color: #FF4500; 
             display: inline-block;
             clip-path: polygon(
                 20% 0%, 40% 0%, 50% 20%, 60% 0%, 80% 0%, 
@@ -106,12 +106,11 @@
             top: 50%;
             left: 50%;
             transform: translate(-50%, -50%);
-            background: #000;
+            background: rgba(46, 26, 71, 0.95);
             padding: 40px;
             text-align: center;
             display: none;
-            border: 4px solid #fff;
-            box-shadow: 10px 10px 0px #FFFF00;
+            border: 4px solid #FFD700;
             min-width: 400px;
         }
         .btn-pixel {
@@ -119,23 +118,22 @@
             padding: 15px 30px;
             cursor: pointer;
             font-size: 16px;
-            background: #fff;
+            background: #FFD700;
             color: #000;
             border: none;
             font-family: 'Press Start 2P', monospace;
             text-transform: uppercase;
         }
         .btn-pixel:hover {
-            background: #FFFF00;
-            color: #000;
+            background: #FFA500;
+            color: #FFF;
         }
         
         #controls-hint {
             margin-top: 15px;
             font-size: 12px;
-            color: #666;
-            text-transform: uppercase;
-            letter-spacing: 2px;
+            color: #fff;
+            text-shadow: 1px 1px 0 #000;
         }
     </style>
 </head>
@@ -153,25 +151,24 @@
         </div>
 
         <div id="win-screen" class="modal-screen">
-            <h1 style="color: #FFFF00; text-shadow: 4px 4px #333; margin-bottom: 20px;">MISSION ACCOMPLISHED</h1>
-            <p style="font-size: 12px; color: #aaa;">SYSTEM STATUS: HACKED</p>
-            <p id="final-time" style="color: #fff; margin: 20px 0;">TIME: 0.00s</p>
-            <button class="btn-pixel" onclick="location.reload()">REBOOT SYSTEM</button>
+            <h1 style="color: #FFD700; margin-bottom: 20px;">¡CUSCO CONQUISTADO!</h1>
+            <p style="font-size: 12px; color: #FFA500;">MACHU PICCHU ALCANZADO</p>
+            <p id="final-time" style="color: #fff; margin: 20px 0;">TIEMPO: 0.00s</p>
+            <button class="btn-pixel" onclick="location.reload()">JUGAR DE NUEVO</button>
         </div>
 
         <div id="lose-screen" class="modal-screen">
-            <h1 style="color: #FF0033; margin-bottom: 20px;">SYSTEM FAILURE</h1>
-            <p style="font-size: 12px; color: #aaa;">Connection Lost...</p>
-            <button class="btn-pixel" onclick="location.reload()">RETRY</button>
+            <h1 style="color: #FF4500; margin-bottom: 20px;">GAME OVER</h1>
+            <p style="font-size: 12px; color: #aaa;">Inténtalo otra vez</p>
+            <button class="btn-pixel" onclick="location.reload()">REINTENTAR</button>
         </div>
     </div>
-    <div id="controls-hint">[ARROWS] MOVE • [SPACE] JUMP</div>
+    <div id="controls-hint">[FLECHAS] MOVER • [ESPACIO] SALTAR</div>
 
 <script>
     const canvas = document.getElementById('gameCanvas');
     const ctx = canvas.getContext('2d');
     
-    // Configuración Pixel Art
     ctx.imageSmoothingEnabled = false;
 
     // Configuración del juego
@@ -182,19 +179,23 @@
     const MAX_LIVES = 3;
     
     const PALETTE = {
-        bg: '#0a0a0a',
-        platform: '#DDDDDD',
-        platformShadow: '#333333',
-        accentRed: '#FF0033',
-        accentYellow: '#FFFF00',
-        text: '#FFFFFF',
-        mountainDots: '#2a2a2a'
+        skyTop: '#332211',
+        skyBottom: '#CC6600',
+        sun: '#FFD700',
+        mountainDistant: '#2F4F4F', // DarkSlateGray
+        mountainMid: '#5A4D41',     // Marrón grisáceo sólido
+        ruinHighlight: '#8B4513',
+        ruinShadow: '#3E2723',
+        grass: '#4CAF50',           // Verde pasto
+        grassLight: '#81C784',      // Brillo pasto
+        dirt: '#5D4037',            // Tierra
+        flowerColors: ['#FFC0CB', '#FFD700', '#E0FFFF', '#FF69B4'] // Rosa, Oro, Cian, HotPink
     };
 
     const TARGET_PHRASE = "IAHACKATONPERU".split('');
     let collectedIndices = new Set();
     
-    // Estado del juego
+    // Estado
     let gameStartTime = 0;
     let gameEnded = false;
     let lives = MAX_LIVES;
@@ -219,6 +220,7 @@
             this.grounded = false;
             this.facingRight = true;
             this.invulnerable = false;
+            this.color = '#FFFFFF'; // LLAMA BLANCA
         }
 
         respawn() {
@@ -275,34 +277,15 @@
 
         draw() {
             ctx.save();
-            ctx.translate(this.x + this.width/2, this.y + this.height/2);
+            ctx.translate(Math.floor(this.x + this.width/2), Math.floor(this.y + this.height/2));
             if (!this.facingRight) ctx.scale(-1, 1);
             
-            if (this.invulnerable && Math.floor(Date.now() / 100) % 2 === 0) {
-                ctx.restore();
-                return;
-            }
-
-            // --- LLAMA BLANCA (Diseño Clásico Geométrico) ---
-            
-            // Cuerpo
-            ctx.fillStyle = '#FFFFFF';
+            // Cuerpo Blanco (Mejor contraste)
+            ctx.fillStyle = this.color;
             ctx.fillRect(-20, -10, 40, 20);
             
-            // Cuello y Cabeza
-            ctx.fillRect(10, -30, 10, 30);
-            
-            // Orejas
-            ctx.fillStyle = '#333';
-            ctx.fillRect(12, -35, 3, 8);
-            ctx.fillRect(17, -35, 3, 8);
-
-            // Gafas
-            ctx.fillStyle = '#000';
-            ctx.fillRect(13, -25, 6, 4); 
-            
             // Patas
-            ctx.fillStyle = '#EEE'; 
+            ctx.fillStyle = '#EEE'; // Gris muy claro para patas
             if (Math.abs(this.vx) > 0.5 && !this.grounded === false) {
                 const walk = Math.sin(Date.now() / 100) * 10;
                 ctx.fillRect(-18 + walk, 10, 8, 15);
@@ -312,12 +295,27 @@
                 ctx.fillRect(10, 10, 8, 15);
             }
 
-            // Manta Cyber
-            ctx.fillStyle = PALETTE.accentRed; 
+            // Cuello/Cabeza
+            ctx.fillStyle = this.color;
+            ctx.fillRect(10, -30, 10, 30);
+            
+            // Orejas
+            ctx.fillStyle = '#EEE';
+            ctx.fillRect(12, -35, 3, 8);
+            ctx.fillRect(17, -35, 3, 8);
+            
+            // Ojo
+            ctx.fillStyle = 'black';
+            ctx.fillRect(13, -25, 4, 4);
+            ctx.fillStyle = 'white';
+            ctx.fillRect(15, -25, 2, 2);
+            
+            // Manta peruana (Colores vivos)
+            ctx.fillStyle = '#D500F9'; // Violeta neon
             ctx.fillRect(-10, -10, 5, 20);
-            ctx.fillStyle = PALETTE.accentYellow; 
+            ctx.fillStyle = '#00E676'; // Verde neon
             ctx.fillRect(-5, -10, 5, 20);
-            ctx.fillStyle = '#333'; 
+            ctx.fillStyle = '#FF3D00'; // Rojo neon
             ctx.fillRect(0, -10, 5, 20);
 
             ctx.restore();
@@ -362,7 +360,8 @@
         document.getElementById('lose-screen').style.display = 'none';
         updateLivesUI();
 
-        platforms.push({ x: 0, y: GAME_HEIGHT - 40, width: 600, height: 40 });
+        // Suelo Base Seguro con generador de flores pseudo-aleatorio
+        platforms.push(createPlatform(0, GAME_HEIGHT - 40, 600, 40));
 
         const phrase = TARGET_PHRASE;
         let currentX = 500; 
@@ -372,9 +371,10 @@
             currentX += gap;
             const yPos = 150 + Math.random() * 150; 
             
-            platforms.push({ x: currentX - 50, y: yPos + 40, width: 100, height: 20 });
+            platforms.push(createPlatform(currentX - 50, yPos + 40, 100, 20));
+            
             if (gap > 300 || yPos < 150) {
-                 platforms.push({ x: currentX - (gap/2) - 40, y: yPos + 100, width: 60, height: 20 });
+                 platforms.push(createPlatform(currentX - (gap/2) - 40, yPos + 100, 60, 20));
             }
             letters.push({
                 char: char, targetIndex: index, x: currentX - 10, y: yPos, width: 20, height: 20, collected: false
@@ -382,7 +382,7 @@
         });
 
         const finalX = currentX + 300;
-        platforms.push({ x: finalX, y: GAME_HEIGHT - 60, width: 400, height: 60 }); 
+        platforms.push(createPlatform(finalX, GAME_HEIGHT - 60, 400, 60)); 
         finalFlag = { x: finalX + 200, y: GAME_HEIGHT - 60 };
 
         const uiContainer = document.getElementById('letters-container');
@@ -396,13 +396,29 @@
         });
     }
 
+    // Helper para crear plataforma con decoración (flores) precalculada
+    function createPlatform(x, y, w, h) {
+        let flowers = [];
+        // Generar flores aleatorias sobre la superficie
+        const numFlowers = Math.floor(w / 20);
+        for(let i=0; i<numFlowers; i++) {
+            if(Math.random() > 0.6) { // 40% chance de flor
+                flowers.push({
+                    x: (Math.random() * w),
+                    color: PALETTE.flowerColors[Math.floor(Math.random() * PALETTE.flowerColors.length)]
+                });
+            }
+        }
+        return { x, y, width: w, height: h, flowers: flowers };
+    }
+
     function loseLife() {
         lives--;
         updateLivesUI();
         const flash = document.createElement('div');
         flash.style.position = 'absolute';
         flash.style.top = 0; flash.style.left = 0; flash.style.width = '100%'; flash.style.height = '100%';
-        flash.style.background = 'rgba(255, 0, 51, 0.3)';
+        flash.style.background = 'rgba(255, 69, 0, 0.4)';
         document.body.appendChild(flash);
         setTimeout(() => flash.remove(), 100);
         if (lives <= 0) finishGame(false);
@@ -423,7 +439,7 @@
         if (!gameEnded) {
             const now = Date.now();
             const diff = (now - gameStartTime) / 1000;
-            document.getElementById('timer-display').innerText = "TIME: " + diff.toFixed(2);
+            document.getElementById('timer-display').innerText = "TIEMPO: " + diff.toFixed(2);
         }
         player.update();
         
@@ -449,11 +465,11 @@
         collectedIndices.add(letter.targetIndex);
         document.getElementById(`slot-${letter.targetIndex}`).classList.add('collected');
         
-        for(let i=0; i<8; i++) {
+        for(let i=0; i<10; i++) {
             particles.push({
                 x: letter.x + 10, y: letter.y + 10,
                 vx: (Math.random() - 0.5) * 10, vy: (Math.random() - 0.5) * 10,
-                life: 30, color: PALETTE.accentYellow
+                life: 30, color: PALETTE.sun
             });
         }
     }
@@ -464,84 +480,127 @@
         if (win) {
             const now = Date.now();
             const diff = (now - gameStartTime) / 1000;
-            document.getElementById('final-time').innerText = "TIME: " + diff.toFixed(2) + "s";
+            document.getElementById('final-time').innerText = "TIEMPO: " + diff.toFixed(2) + "s";
             document.getElementById('win-screen').style.display = 'block';
         } else {
             document.getElementById('lose-screen').style.display = 'block';
         }
     }
 
-    // --- CORRECCIÓN DEL FONDO (PARALLAX FIX) ---
-    function drawMountainParticles() {
-        // Iteramos sobre el ancho de la PANTALLA (0 a 800)
-        // en lugar de usar coordenadas de mundo que se salían de cuadro.
-        for(let screenX = 0; screenX <= VIEWPORT_WIDTH; screenX += 10) {
-            
-            // Calculamos qué parte del "mundo" estamos viendo para el ruido
-            // Multiplicamos por 0.2 para que se mueva lento (efecto lejanía)
-            let worldNoiseX = screenX + (cameraX * 0.2); 
+    // --- FONDO SÓLIDO Y ESTÁTICO (Estilo Ilustración Larga) ---
+    function drawSunsetBackground() {
+        // Cielo degradado simple
+        const grad = ctx.createLinearGradient(0, 0, 0, GAME_HEIGHT);
+        grad.addColorStop(0, PALETTE.skyTop);
+        grad.addColorStop(1, PALETTE.skyBottom);
+        ctx.fillStyle = grad;
+        ctx.fillRect(0, 0, VIEWPORT_WIDTH, GAME_HEIGHT);
 
-            // Función de altura procedural
-            let h = 150 + Math.sin(worldNoiseX * 0.005) * 100;
-            
-            // Variaciones para simular ruinas
-            if (Math.sin(worldNoiseX * 0.01) > 0.5) h += 50; 
-            if (Math.sin(worldNoiseX * 0.03) > 0.8) h += 30;
+        // Sol estático
+        ctx.fillStyle = PALETTE.sun;
+        ctx.beginPath();
+        ctx.arc(150, 100, 40, 0, Math.PI*2);
+        ctx.fill();
+    }
 
-            // Dibujamos la columna de puntos
-            ctx.fillStyle = PALETTE.mountainDots;
-            for(let y = GAME_HEIGHT - h; y < GAME_HEIGHT; y += 12) {
-                // Dibujar punto
-                ctx.fillRect(Math.floor(screenX), Math.floor(y), 2, 2);
-            }
+    function drawSolidMountainLandscape() {
+        // Para que se sienta como una "imagen larga", mapeamos directamente el worldX
+        // y dibujamos formas poligonales grandes.
+        
+        // Capa 1: Montañas lejanas (Fijas al fondo, se mueven lento)
+        ctx.fillStyle = PALETTE.mountainDistant;
+        ctx.beginPath();
+        ctx.moveTo(0, GAME_HEIGHT);
+        
+        // Iteramos por la pantalla pero calculamos ruido basado en worldX
+        for(let x = 0; x <= VIEWPORT_WIDTH; x+=10) {
+            let parallaxX = x + (cameraX * 0.2); 
+            // Ruido suave
+            let h = 150 + Math.sin(parallaxX * 0.003) * 100 + Math.sin(parallaxX * 0.01) * 20;
+            ctx.lineTo(x, GAME_HEIGHT - h);
         }
+        ctx.lineTo(VIEWPORT_WIDTH, GAME_HEIGHT);
+        ctx.fill();
+
+        // Capa 2: Ruinas/Montañas medias (Más cerca, más detalle, movimiento medio)
+        ctx.fillStyle = PALETTE.mountainMid;
+        ctx.beginPath();
+        ctx.moveTo(0, GAME_HEIGHT);
+        for(let x = 0; x <= VIEWPORT_WIDTH; x+=10) {
+            let parallaxX = x + (cameraX * 0.5); 
+            // Ruido más anguloso para ruinas
+            let h = 80 + Math.abs(Math.sin(parallaxX * 0.005)) * 150;
+            
+            // Simular terrazas
+            if (h > 100) h = Math.floor(h / 20) * 20;
+
+            ctx.lineTo(x, GAME_HEIGHT - h);
+        }
+        ctx.lineTo(VIEWPORT_WIDTH, GAME_HEIGHT);
+        ctx.fill();
+    }
+
+    function drawFogOverlay() {
+        // Filtro suave para unificar colores
+        ctx.fillStyle = 'rgba(60, 30, 10, 0.2)';
+        ctx.fillRect(0, 0, VIEWPORT_WIDTH, GAME_HEIGHT);
     }
 
     function draw() {
         ctx.clearRect(0, 0, canvas.width, canvas.height);
         
         // 1. Fondo
-        ctx.fillStyle = PALETTE.bg;
-        ctx.fillRect(0, 0, canvas.width, canvas.height);
-
-        // 2. Montañas
-        drawMountainParticles();
+        drawSunsetBackground();
+        drawSolidMountainLandscape();
+        drawFogOverlay(); // Blur/Opacidad visual
 
         ctx.save();
         ctx.translate(-cameraX, 0);
 
-        // Plataformas
+        // Plataformas con PASTO y FLORES
         platforms.forEach(p => {
-            ctx.fillStyle = PALETTE.platform;
-            ctx.fillRect(p.x, p.y, p.width, p.height);
-            ctx.fillStyle = PALETTE.platformShadow;
-            ctx.fillRect(p.x, p.y + p.height - 5, p.width, 5);
-            ctx.fillStyle = PALETTE.accentYellow;
-            ctx.fillRect(p.x, p.y + 10, 5, 5);
+            // Parte inferior (Tierra)
+            ctx.fillStyle = PALETTE.dirt;
+            ctx.fillRect(p.x, p.y + 10, p.width, p.height - 10);
+            
+            // Parte superior (Pasto)
+            ctx.fillStyle = PALETTE.grass;
+            ctx.fillRect(p.x, p.y, p.width, 10);
+            
+            // Borde pasto claro
+            ctx.fillStyle = PALETTE.grassLight;
+            ctx.fillRect(p.x, p.y, p.width, 3);
+
+            // Flores
+            p.flowers.forEach(f => {
+                ctx.fillStyle = f.color;
+                ctx.fillRect(p.x + f.x, p.y - 4, 4, 4); // Flor pixel
+                ctx.fillStyle = '#2E7D32'; // Tallo
+                ctx.fillRect(p.x + f.x + 1, p.y, 2, 2);
+            });
         });
 
-        // Bandera
-        ctx.fillStyle = '#555';
-        ctx.fillRect(finalFlag.x, finalFlag.y - 120, 4, 120);
+        // Bandera Final
+        ctx.fillStyle = '#333';
+        ctx.fillRect(finalFlag.x, finalFlag.y - 120, 6, 120);
         const wave = Math.sin(Date.now() / 200) * 5;
-        // Bandera Perú Neon
-        ctx.fillStyle = 'rgba(255, 0, 51, 0.8)';
-        ctx.fillRect(finalFlag.x + 4, finalFlag.y - 120, 20, 40 + wave); 
-        ctx.fillStyle = 'rgba(255, 255, 255, 0.9)';
-        ctx.fillRect(finalFlag.x + 24, finalFlag.y - 120 + (wave*0.5), 20, 40 + wave); 
-        ctx.fillStyle = 'rgba(255, 0, 51, 0.8)';
-        ctx.fillRect(finalFlag.x + 44, finalFlag.y - 120 + wave, 20, 40 + wave);
+        ctx.fillStyle = '#D91023';
+        ctx.fillRect(finalFlag.x + 6, finalFlag.y - 120, 10, 60 + wave); 
+        ctx.fillStyle = '#FFF';
+        ctx.fillRect(finalFlag.x + 16, finalFlag.y - 120 + (wave*0.3), 10, 60 + wave); 
+        ctx.fillStyle = '#D91023';
+        ctx.fillRect(finalFlag.x + 26, finalFlag.y - 120 + wave, 10, 60 + wave); 
 
         // Letras
-        ctx.font = "bold 20px 'Courier New'"; 
+        ctx.font = "bold 24px 'Press Start 2P'"; 
         ctx.textAlign = "center";
         letters.forEach(l => {
             if (!l.collected) {
                 const floatY = Math.sin(Date.now() / 150) * 5;
-                ctx.shadowColor = PALETTE.accentYellow;
-                ctx.shadowBlur = 10;
-                ctx.fillStyle = PALETTE.text;
-                ctx.fillText(l.char, l.x + 10, l.y + floatY + 15);
+                ctx.shadowColor = '#FFD700';
+                ctx.shadowBlur = 15;
+                ctx.fillStyle = '#FFF';
+                ctx.fillText(l.char, l.x + 10, l.y + floatY + 25);
                 ctx.shadowBlur = 0;
             }
         });
@@ -552,14 +611,9 @@
             p.x += p.vx;
             p.y += p.vy;
             ctx.fillStyle = p.color;
-            ctx.fillRect(p.x, p.y, 3, 3);
+            ctx.fillRect(p.x, p.y, 4, 4);
             if(p.life <= 0) particles.splice(index, 1);
         });
-
-        if (player.x + player.width > finalFlag.x - 300 && collectedIndices.size < TARGET_PHRASE.length) {
-            ctx.fillStyle = PALETTE.accentRed;
-            ctx.fillText("DATA MISSING", player.x + 20, player.y - 30);
-        }
 
         player.draw();
         ctx.restore();
@@ -567,13 +621,11 @@
         requestAnimationFrame(loop);
     }
     
-    // Función del bucle principal restaurada
     function loop() {
         update();
         draw();
     }
 
-    // Inputs
     window.addEventListener('keydown', e => {
         if(keys.hasOwnProperty(e.code) || e.code === 'Space') {
             keys[e.code === 'Space' ? 'Space' : e.code] = true;
@@ -587,7 +639,6 @@
         }
     });
 
-    // Iniciar
     initLevel();
     loop();
 
