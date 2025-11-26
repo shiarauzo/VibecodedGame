@@ -1,0 +1,516 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Llama Hackaton Adventure - Prototipo</title>
+    <style>
+        body {
+            margin: 0;
+            background-color: #202028;
+            color: white;
+            font-family: 'Courier New', Courier, monospace;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            height: 100vh;
+            overflow: hidden;
+        }
+        #game-container {
+            position: relative;
+            box-shadow: 0 0 20px rgba(0,0,0,0.5);
+        }
+        canvas {
+            background: linear-gradient(to bottom, #87CEEB, #E0F7FA); /* Cielo */
+            display: block;
+            border-radius: 4px;
+        }
+        #ui-layer {
+            position: absolute;
+            top: 10px;
+            left: 10px;
+            right: 10px;
+            display: flex;
+            justify-content: center;
+            pointer-events: none;
+        }
+        .letter-slot {
+            width: 30px;
+            height: 40px;
+            background: rgba(0,0,0,0.3);
+            margin: 0 2px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: bold;
+            font-size: 20px;
+            color: rgba(255,255,255,0.2);
+            border: 2px solid white;
+            border-radius: 4px;
+        }
+        .letter-slot.collected {
+            background: #FFD700;
+            color: #000;
+            animation: pop 0.3s ease;
+        }
+        @keyframes pop {
+            0% { transform: scale(1); }
+            50% { transform: scale(1.3); }
+            100% { transform: scale(1); }
+        }
+        #controls-hint {
+            margin-top: 10px;
+            font-size: 0.9em;
+            color: #aaa;
+        }
+        #win-screen {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background: rgba(0,0,0,0.9);
+            padding: 20px;
+            text-align: center;
+            display: none;
+            border-radius: 10px;
+            border: 2px solid #FFD700;
+        }
+    </style>
+</head>
+<body>
+
+    <div id="game-container">
+        <canvas id="gameCanvas" width="800" height="400"></canvas>
+        <div id="ui-layer">
+            <div id="letters-container" style="display: flex;"></div>
+        </div>
+        <div id="win-screen">
+            <h1 style="color: #FFD700;">¡IA HACKATON PERU!</h1>
+            <p>¡Misión Completada!</p>
+            <button onclick="location.reload()" style="padding: 10px 20px; cursor: pointer;">Jugar de nuevo</button>
+        </div>
+    </div>
+    <div id="controls-hint">Usa las FLECHAS para moverte | ESPACIO para saltar</div>
+
+<script>
+    const canvas = document.getElementById('gameCanvas');
+    const ctx = canvas.getContext('2d');
+
+    // Configuración del juego
+    const VIEWPORT_WIDTH = 800;
+    const GAME_HEIGHT = 400;
+    const WORLD_WIDTH = 8000; // Mundo mucho más largo
+    const GRAVITY = 0.6;
+    
+    // Frase Objetivo
+    const TARGET_PHRASE = "IAHACKATONPERU".split('');
+    // Índices de la frase que ya han sido recolectados
+    let collectedIndices = new Set();
+
+    // Estado de teclas
+    const keys = {
+        ArrowRight: false,
+        ArrowLeft: false,
+        Space: false,
+        ArrowUp: false
+    };
+
+    // Clase Jugador (La Llama)
+    class Player {
+        constructor() {
+            this.width = 40;
+            this.height = 40;
+            this.x = 50;
+            this.y = GAME_HEIGHT - 100;
+            this.vx = 0;
+            this.vy = 0;
+            this.speed = 6;
+            this.jumpPower = -13;
+            this.grounded = false;
+            this.facingRight = true;
+            this.color = '#8B4513'; // Marrón llama
+        }
+
+        update() {
+            // Movimiento horizontal
+            if (keys.ArrowRight) {
+                this.vx = this.speed;
+                this.facingRight = true;
+            } else if (keys.ArrowLeft) {
+                this.vx = -this.speed;
+                this.facingRight = false;
+            } else {
+                this.vx *= 0.8; // Fricción
+            }
+
+            // Salto
+            if ((keys.Space || keys.ArrowUp) && this.grounded) {
+                this.vy = this.jumpPower;
+                this.grounded = false;
+            }
+
+            // Física Vertical
+            this.vy += GRAVITY;
+            this.x += this.vx;
+            this.y += this.vy;
+
+            // Límites del mundo
+            if (this.x < 0) this.x = 0;
+            if (this.x > WORLD_WIDTH - this.width) this.x = WORLD_WIDTH - this.width;
+
+            // Colisiones con plataformas
+            this.grounded = false;
+            platforms.forEach(platform => {
+                const dir = this.colCheck(this, platform);
+                if (dir === "b") { // Colisión desde abajo (tocando suelo)
+                    this.grounded = true;
+                    this.vy = 0;
+                }
+            });
+            
+            // Si cae al vacío, resetear
+            if (this.y > GAME_HEIGHT) {
+                this.x = Math.max(0, this.x - 200); // Checkpoint simple (retrocede un poco)
+                this.y = 0;
+                this.vy = 0;
+            }
+        }
+
+        draw() {
+            ctx.save();
+            // Dibujo simple de llama (cuerpo y cuello)
+            ctx.translate(Math.floor(this.x + this.width/2), Math.floor(this.y + this.height/2));
+            if (!this.facingRight) ctx.scale(-1, 1);
+            
+            // Cuerpo
+            ctx.fillStyle = this.color;
+            ctx.fillRect(-20, -10, 40, 20);
+            // Patas
+            if (Math.abs(this.vx) > 0.5 && !this.grounded === false) {
+                // Animación simple de caminar
+                const walk = Math.sin(Date.now() / 100) * 10;
+                ctx.fillRect(-18 + walk, 10, 8, 15);
+                ctx.fillRect(10 - walk, 10, 8, 15);
+            } else {
+                ctx.fillRect(-18, 10, 8, 15);
+                ctx.fillRect(10, 10, 8, 15);
+            }
+
+            // Cuello/Cabeza
+            ctx.fillRect(10, -30, 10, 30);
+            // Orejas
+            ctx.fillStyle = '#5D4037';
+            ctx.fillRect(12, -35, 3, 8);
+            ctx.fillRect(17, -35, 3, 8);
+            // Ojo
+            ctx.fillStyle = 'white';
+            ctx.fillRect(13, -25, 4, 4);
+            ctx.fillStyle = 'black';
+            ctx.fillRect(15, -25, 2, 2);
+            
+            // Manta peruana (decoración)
+            ctx.fillStyle = '#E91E63'; // Rosa
+            ctx.fillRect(-10, -10, 5, 20);
+            ctx.fillStyle = '#FFEB3B'; // Amarillo
+            ctx.fillRect(-5, -10, 5, 20);
+            ctx.fillStyle = '#2196F3'; // Azul
+            ctx.fillRect(0, -10, 5, 20);
+
+            ctx.restore();
+        }
+
+        // Detección AABB simple
+        colCheck(shapeA, shapeB) {
+            const vX = (shapeA.x + (shapeA.width / 2)) - (shapeB.x + (shapeB.width / 2));
+            const vY = (shapeA.y + (shapeA.height / 2)) - (shapeB.y + (shapeB.height / 2));
+            const hWidths = (shapeA.width / 2) + (shapeB.width / 2);
+            const hHeights = (shapeA.height / 2) + (shapeB.height / 2);
+            let colDir = null;
+
+            if (Math.abs(vX) < hWidths && Math.abs(vY) < hHeights) {
+                const oX = hWidths - Math.abs(vX);
+                const oY = hHeights - Math.abs(vY);
+                if (oX >= oY) {
+                    if (vY > 0) {
+                        colDir = "t"; // Top
+                        shapeA.y += oY;
+                    } else {
+                        colDir = "b"; // Bottom (Suelo)
+                        shapeA.y -= oY;
+                    }
+                } else {
+                    if (vX > 0) {
+                        colDir = "l";
+                        shapeA.x += oX;
+                    } else {
+                        colDir = "r";
+                        shapeA.x -= oX;
+                    }
+                }
+            }
+            return colDir;
+        }
+    }
+
+    // Configuración de niveles y objetos
+    let player = new Player();
+    let platforms = [];
+    let letters = [];
+    let cameraX = 0;
+
+    function initLevel() {
+        platforms = [];
+        letters = [];
+        
+        // Suelo Base (con huecos)
+        // Creamos tramos de suelo para que no sea infinito
+        for(let i = 0; i < WORLD_WIDTH; i+= 600) {
+             if (Math.random() > 0.2 || i < 400) { // 20% de probabilidad de hueco, principio seguro
+                 platforms.push({ x: i, y: GAME_HEIGHT - 40, width: 500, height: 40, color: '#4CAF50' });
+             }
+        }
+
+        // Plataformas y Letras distribuidas (Espaciadas y con altura variable)
+        // I A H A C K A T O N P E R U
+        
+        const phrase = "IAHACKATONPERU".split('');
+        let currentX = 400; // Empezar más adelante
+
+        phrase.forEach((char, index) => {
+            // Distancia variable entre letras (400 a 600px)
+            const gap = 400 + Math.random() * 200;
+            currentX += gap;
+
+            // Altura variable (entre 100 y 300)
+            const yPos = 150 + Math.random() * 150;
+            
+            // Plataforma para la letra
+            platforms.push({ 
+                x: currentX - 60, 
+                y: yPos + 40, 
+                width: 120, 
+                height: 20, 
+                color: '#8D6E63' // Madera/Tierra
+            });
+
+            // A veces agregar una plataforma intermedia para ayudar a llegar
+            if (Math.random() > 0.5) {
+                platforms.push({
+                    x: currentX - (gap/2),
+                    y: yPos + 80 + (Math.random()*50),
+                    width: 80,
+                    height: 20,
+                    color: '#8D6E63'
+                });
+            }
+            
+            // Crear letra
+            letters.push({
+                char: char,
+                targetIndex: index,
+                x: currentX - 15,
+                y: yPos,
+                width: 30,
+                height: 30,
+                collected: false
+            });
+        });
+
+        // Plataforma final
+        platforms.push({ x: currentX + 200, y: GAME_HEIGHT - 100, width: 400, height: 40, color: '#FFD700' });
+
+        // Generar UI
+        const uiContainer = document.getElementById('letters-container');
+        uiContainer.innerHTML = '';
+        TARGET_PHRASE.forEach((char, i) => {
+            const div = document.createElement('div');
+            div.className = 'letter-slot';
+            div.id = `slot-${i}`;
+            div.innerText = char;
+            uiContainer.appendChild(div);
+        });
+    }
+
+    function update() {
+        player.update();
+
+        // Cámara sigue al jugador (Clamp)
+        cameraX = player.x - 200;
+        if (cameraX < 0) cameraX = 0;
+        if (cameraX > WORLD_WIDTH - VIEWPORT_WIDTH) cameraX = WORLD_WIDTH - VIEWPORT_WIDTH;
+
+        // Chequear colisión con letras
+        letters.forEach(letter => {
+            if (!letter.collected) {
+                if (player.x < letter.x + letter.width &&
+                    player.x + player.width > letter.x &&
+                    player.y < letter.y + letter.height &&
+                    player.y + player.height > letter.y) {
+                    
+                    collectLetter(letter);
+                }
+            }
+        });
+    }
+
+    function collectLetter(letter) {
+        if(letter.collected) return;
+        letter.collected = true;
+        collectedIndices.add(letter.targetIndex);
+        
+        // Sonido visual
+        const slot = document.getElementById(`slot-${letter.targetIndex}`);
+        slot.classList.add('collected');
+        
+        checkWin();
+    }
+
+    function checkWin() {
+        if (collectedIndices.size === TARGET_PHRASE.length) {
+            document.getElementById('win-screen').style.display = 'block';
+        }
+    }
+
+    function drawBackground() {
+        // Fondo Montañas Lejanas (Parallax lento)
+        const parallaxX = cameraX * 0.2;
+        ctx.fillStyle = '#455A64'; // Gris azulado
+        ctx.beginPath();
+        ctx.moveTo(0, GAME_HEIGHT);
+        for(let i=0; i < WORLD_WIDTH + VIEWPORT_WIDTH; i+= 200) {
+            // Generar picos montañosos
+            const h = 200 + Math.sin(i * 0.01) * 100;
+            ctx.lineTo(i - parallaxX, GAME_HEIGHT - h);
+        }
+        ctx.lineTo(WORLD_WIDTH, GAME_HEIGHT);
+        ctx.fill();
+
+        // Ruinas Machu Picchu (Parallax medio)
+        const ruinX = cameraX * 0.5;
+        ctx.fillStyle = '#5D4037'; // Marrón piedra
+        
+        // Dibujar terrazas estilo inca
+        for (let i = 100; i < WORLD_WIDTH; i+= 500) {
+            if (i > cameraX - 100 && i < cameraX + VIEWPORT_WIDTH + 100) {
+                 // Base terraza
+                 const xPos = i - ruinX + (i*0.3); // Ajuste posición visual
+                 ctx.fillRect(xPos, GAME_HEIGHT - 150, 200, 150);
+                 // Escalones
+                 ctx.fillStyle = '#795548';
+                 ctx.fillRect(xPos + 10, GAME_HEIGHT - 130, 180, 20);
+                 ctx.fillRect(xPos + 20, GAME_HEIGHT - 110, 160, 20);
+                 // Casita inca pixel art
+                 ctx.fillStyle = '#8D6E63';
+                 ctx.beginPath();
+                 ctx.moveTo(xPos + 50, GAME_HEIGHT - 150);
+                 ctx.lineTo(xPos + 100, GAME_HEIGHT - 200); // Techo
+                 ctx.lineTo(xPos + 150, GAME_HEIGHT - 150);
+                 ctx.fill();
+                 ctx.fillStyle = '#5D4037'; // Volver al color base
+            }
+        }
+        
+        // Nubes
+        ctx.fillStyle = 'rgba(255, 255, 255, 0.4)';
+        for(let i=0; i<20; i++) {
+             const cx = (i * 600) - (cameraX * 0.1);
+             const cy = 50 + (i % 3) * 30;
+             ctx.beginPath();
+             ctx.arc(cx, cy, 40, 0, Math.PI * 2);
+             ctx.arc(cx + 40, cy + 10, 50, 0, Math.PI * 2);
+             ctx.arc(cx - 40, cy + 10, 50, 0, Math.PI * 2);
+             ctx.fill();
+        }
+    }
+
+    function draw() {
+        // Limpiar
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+        // 1. DIBUJAR FONDO (Antes del translate principal para parallax)
+        drawBackground();
+
+        ctx.save();
+        ctx.translate(-cameraX, 0);
+
+        // 2. DIBUJAR JUEGO
+        // Dibujar Plataformas
+        platforms.forEach(p => {
+            // Textura simple de bloques de piedra
+            ctx.fillStyle = p.color;
+            ctx.fillRect(p.x, p.y, p.width, p.height);
+            
+            // Detalle de hierba/piedra
+            if (p.color === '#4CAF50') {
+                ctx.fillStyle = '#388E3C';
+                ctx.fillRect(p.x, p.y, p.width, 5); // Borde hierba
+            } else {
+                ctx.fillStyle = '#5D4037';
+                ctx.fillRect(p.x, p.y, p.width, 2);
+                ctx.fillRect(p.x, p.y + 10, p.width, 2);
+            }
+        });
+
+        // Dibujar Letras
+        ctx.font = "bold 24px Arial";
+        ctx.textAlign = "center";
+        letters.forEach(l => {
+            if (!l.collected) {
+                // Efecto flotante
+                const floatY = Math.sin(Date.now() / 200) * 5;
+                
+                // Brillo
+                ctx.fillStyle = 'rgba(255, 215, 0, 0.5)';
+                ctx.beginPath();
+                ctx.arc(l.x + 15, l.y + 15 + floatY, 25, 0, Math.PI * 2);
+                ctx.fill();
+
+                ctx.fillStyle = 'yellow';
+                ctx.beginPath();
+                ctx.arc(l.x + 15, l.y + 15 + floatY, 20, 0, Math.PI * 2);
+                ctx.fill();
+                ctx.lineWidth = 2;
+                ctx.strokeStyle = 'orange';
+                ctx.stroke();
+
+                ctx.fillStyle = 'black';
+                ctx.fillText(l.char, l.x + 15, l.y + 24 + floatY);
+            }
+        });
+
+        // Dibujar Jugador
+        player.draw();
+
+        ctx.restore();
+        
+        requestAnimationFrame(loop);
+    }
+
+    function loop() {
+        update();
+        draw();
+    }
+
+    // Listeners
+    window.addEventListener('keydown', e => {
+        if(keys.hasOwnProperty(e.code) || e.code === 'Space') {
+            keys[e.code === 'Space' ? 'Space' : e.code] = true;
+            // Prevenir scroll de la página con espacio
+            if(e.code === 'Space') e.preventDefault();
+        }
+    });
+
+    window.addEventListener('keyup', e => {
+        if(keys.hasOwnProperty(e.code) || e.code === 'Space') {
+            keys[e.code === 'Space' ? 'Space' : e.code] = false;
+        }
+    });
+
+    // Iniciar
+    initLevel();
+    loop();
+
+</script>
+</body>
+</html>
