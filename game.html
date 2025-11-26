@@ -3,13 +3,15 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Llama Hackaton Adventure - Prototipo</title>
+    <title>Llama Hackaton Adventure - Cyber Edition</title>
+    <!-- Fuente Pixelada -->
+    <link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap" rel="stylesheet">
     <style>
         body {
             margin: 0;
-            background-color: #202028;
-            color: white;
-            font-family: 'Courier New', Courier, monospace;
+            background-color: #050505;
+            color: #f0f0f0;
+            font-family: 'Press Start 2P', 'Courier New', monospace;
             display: flex;
             flex-direction: column;
             align-items: center;
@@ -19,75 +21,121 @@
         }
         #game-container {
             position: relative;
-            box-shadow: 0 0 20px rgba(0,0,0,0.5);
+            border: 4px solid #333;
+            box-shadow: 0 0 40px rgba(255, 255, 0, 0.1); /* Brillo amarillo sutil */
         }
         canvas {
-            background: linear-gradient(to bottom, #87CEEB, #E0F7FA); /* Cielo */
+            background-color: #0a0a0a;
             display: block;
-            border-radius: 4px;
+            image-rendering: pixelated;
         }
+        /* UI SUPERIOR */
         #ui-layer {
             position: absolute;
-            top: 10px;
-            left: 10px;
-            right: 10px;
+            top: 20px;
+            left: 20px;
+            right: 20px;
             display: flex;
-            justify-content: center;
+            justify-content: space-between;
             pointer-events: none;
         }
-        #timer-display {
-            position: absolute;
-            top: 10px;
-            right: 20px;
-            font-size: 24px;
-            font-weight: bold;
-            color: #333;
-            background: rgba(255,255,255,0.8);
-            padding: 5px 10px;
-            border-radius: 5px;
-            border: 2px solid #333;
+        
+        #letters-container {
+            display: flex;
+            gap: 4px;
         }
         .letter-slot {
-            width: 30px;
-            height: 40px;
-            background: rgba(0,0,0,0.3);
-            margin: 0 2px;
+            width: 25px;
+            height: 35px;
+            background: rgba(255, 255, 255, 0.1);
+            border: 2px solid #555;
             display: flex;
             align-items: center;
             justify-content: center;
-            font-weight: bold;
-            font-size: 20px;
-            color: rgba(255,255,255,0.2);
-            border: 2px solid white;
-            border-radius: 4px;
+            font-size: 16px;
+            color: #333;
+            text-shadow: none;
         }
+        /* Sombra Amarilla solicitada */
         .letter-slot.collected {
-            background: #FFD700;
+            background: #fff;
+            border-color: #FFFF00;
             color: #000;
-            animation: pop 0.3s ease;
+            box-shadow: 0 0 15px #FFFF00;
+            animation: pop 0.3s steps(2);
+            font-weight: bold;
         }
+
+        #status-panel {
+            display: flex;
+            flex-direction: column;
+            align-items: flex-end;
+            gap: 10px;
+        }
+        #timer-display {
+            font-size: 16px;
+            color: #fff;
+            text-shadow: 2px 2px #000;
+        }
+        #lives-display {
+            display: flex;
+            gap: 5px;
+        }
+        .heart {
+            width: 20px;
+            height: 20px;
+            background-color: #FF0033;
+            display: inline-block;
+            clip-path: polygon(
+                20% 0%, 40% 0%, 50% 20%, 60% 0%, 80% 0%, 
+                100% 20%, 100% 50%, 50% 100%, 0% 50%, 0% 20%
+            );
+        }
+        .heart.lost {
+            background-color: #333;
+        }
+
         @keyframes pop {
             0% { transform: scale(1); }
-            50% { transform: scale(1.3); }
+            50% { transform: scale(1.4); }
             100% { transform: scale(1); }
         }
-        #controls-hint {
-            margin-top: 10px;
-            font-size: 0.9em;
-            color: #aaa;
-        }
-        #win-screen {
+
+        .modal-screen {
             position: absolute;
             top: 50%;
             left: 50%;
             transform: translate(-50%, -50%);
-            background: rgba(0,0,0,0.95);
-            padding: 30px;
+            background: #000;
+            padding: 40px;
             text-align: center;
             display: none;
-            border-radius: 10px;
-            border: 4px solid #FFD700;
-            min-width: 300px;
+            border: 4px solid #fff;
+            box-shadow: 10px 10px 0px #FFFF00;
+            min-width: 400px;
+        }
+        .btn-pixel {
+            margin-top: 20px;
+            padding: 15px 30px;
+            cursor: pointer;
+            font-size: 16px;
+            background: #fff;
+            color: #000;
+            border: none;
+            font-family: 'Press Start 2P', monospace;
+            text-transform: uppercase;
+        }
+        .btn-pixel:hover {
+            background: #FFFF00;
+            color: #000;
+        }
+        
+        #controls-hint {
+            margin-top: 15px;
+            font-size: 12px;
+            color: #666;
+            text-transform: uppercase;
+            letter-spacing: 2px;
         }
     </style>
 </head>
@@ -95,67 +143,96 @@
 
     <div id="game-container">
         <canvas id="gameCanvas" width="800" height="400"></canvas>
-        <div id="timer-display">0.00s</div>
+        
         <div id="ui-layer">
-            <div id="letters-container" style="display: flex;"></div>
+            <div id="letters-container"></div>
+            <div id="status-panel">
+                <div id="lives-display"></div>
+                <div id="timer-display">TIME: 0.00</div>
+            </div>
         </div>
-        <div id="win-screen">
-            <h1 style="color: #FFD700; margin: 0 0 10px 0;">¡IA HACKATON PERU!</h1>
-            <p style="font-size: 1.2em;">¡Misión Completada!</p>
-            <p id="final-time" style="color: #4CAF50; font-size: 1.5em; font-weight: bold; margin: 10px 0;">Tiempo: 0.00s</p>
-            <button onclick="location.reload()" style="padding: 10px 20px; cursor: pointer; font-size: 1.1em; background: #FFD700; border: none; border-radius: 5px; color: black; font-weight: bold;">Jugar de nuevo</button>
+
+        <div id="win-screen" class="modal-screen">
+            <h1 style="color: #FFFF00; text-shadow: 4px 4px #333; margin-bottom: 20px;">MISSION ACCOMPLISHED</h1>
+            <p style="font-size: 12px; color: #aaa;">SYSTEM STATUS: HACKED</p>
+            <p id="final-time" style="color: #fff; margin: 20px 0;">TIME: 0.00s</p>
+            <button class="btn-pixel" onclick="location.reload()">REBOOT SYSTEM</button>
+        </div>
+
+        <div id="lose-screen" class="modal-screen">
+            <h1 style="color: #FF0033; margin-bottom: 20px;">SYSTEM FAILURE</h1>
+            <p style="font-size: 12px; color: #aaa;">Connection Lost...</p>
+            <button class="btn-pixel" onclick="location.reload()">RETRY</button>
         </div>
     </div>
-    <div id="controls-hint">Usa las FLECHAS para moverte | ESPACIO para saltar</div>
+    <div id="controls-hint">[ARROWS] MOVE • [SPACE] JUMP</div>
 
 <script>
     const canvas = document.getElementById('gameCanvas');
     const ctx = canvas.getContext('2d');
-    const timerDisplay = document.getElementById('timer-display');
+    
+    // Configuración Pixel Art
+    ctx.imageSmoothingEnabled = false;
 
     // Configuración del juego
     const VIEWPORT_WIDTH = 800;
     const GAME_HEIGHT = 400;
     const WORLD_WIDTH = 8500; 
     const GRAVITY = 0.6;
+    const MAX_LIVES = 3;
     
-    // Frase Objetivo
+    const PALETTE = {
+        bg: '#0a0a0a',
+        platform: '#DDDDDD',
+        platformShadow: '#333333',
+        accentRed: '#FF0033',
+        accentYellow: '#FFFF00',
+        text: '#FFFFFF',
+        mountainDots: '#2a2a2a'
+    };
+
     const TARGET_PHRASE = "IAHACKATONPERU".split('');
     let collectedIndices = new Set();
     
     // Estado del juego
     let gameStartTime = 0;
     let gameEnded = false;
-    let finalFlag = { x: 0, y: 0, reached: false };
-
-    // Estado de teclas
+    let lives = MAX_LIVES;
+    let finalFlag = { x: 0, y: 0 };
+    
     const keys = {
-        ArrowRight: false,
-        ArrowLeft: false,
-        Space: false,
-        ArrowUp: false
+        ArrowRight: false, ArrowLeft: false, Space: false, ArrowUp: false
     };
 
-    // Clase Jugador
     class Player {
         constructor() {
             this.width = 40;
             this.height = 40;
-            this.x = 50;
-            this.y = GAME_HEIGHT - 100;
+            this.startX = 100;
+            this.startY = GAME_HEIGHT - 100;
+            this.x = this.startX;
+            this.y = this.startY;
             this.vx = 0;
             this.vy = 0;
             this.speed = 6;
             this.jumpPower = -13;
             this.grounded = false;
             this.facingRight = true;
-            this.color = '#8B4513';
+            this.invulnerable = false;
+        }
+
+        respawn() {
+            this.x = Math.max(0, this.x - 300); 
+            this.y = 0; 
+            this.vx = 0;
+            this.vy = 0;
+            this.invulnerable = true;
+            setTimeout(() => this.invulnerable = false, 1000); 
         }
 
         update() {
             if (gameEnded) return;
 
-            // Movimiento horizontal
             if (keys.ArrowRight) {
                 this.vx = this.speed;
                 this.facingRight = true;
@@ -166,22 +243,18 @@
                 this.vx *= 0.8;
             }
 
-            // Salto
             if ((keys.Space || keys.ArrowUp) && this.grounded) {
                 this.vy = this.jumpPower;
                 this.grounded = false;
             }
 
-            // Física Vertical
             this.vy += GRAVITY;
             this.x += this.vx;
             this.y += this.vy;
 
-            // Límites del mundo
             if (this.x < 0) this.x = 0;
             if (this.x > WORLD_WIDTH - this.width) this.x = WORLD_WIDTH - this.width;
 
-            // Colisiones con plataformas
             this.grounded = false;
             platforms.forEach(platform => {
                 const dir = this.colCheck(this, platform);
@@ -191,32 +264,45 @@
                 }
             });
             
-            // Caída al vacío (Respawn)
-            if (this.y > GAME_HEIGHT) {
-                this.x = Math.max(50, this.x - 300); // Castigo leve
-                this.y = 0;
-                this.vy = 0;
-            }
+            if (this.y > GAME_HEIGHT) loseLife();
 
-            // Chequear Victoria (Bandera)
-            if (this.x + this.width > finalFlag.x && this.x < finalFlag.x + 10) {
-                // Solo si está cerca del suelo y tiene todas las letras
+            if (this.x + this.width > finalFlag.x && this.x < finalFlag.x + 20) {
                 if (this.y > finalFlag.y - 100 && collectedIndices.size === TARGET_PHRASE.length) {
-                    finishGame();
+                    finishGame(true);
                 }
             }
         }
 
         draw() {
             ctx.save();
-            ctx.translate(Math.floor(this.x + this.width/2), Math.floor(this.y + this.height/2));
+            ctx.translate(this.x + this.width/2, this.y + this.height/2);
             if (!this.facingRight) ctx.scale(-1, 1);
             
+            if (this.invulnerable && Math.floor(Date.now() / 100) % 2 === 0) {
+                ctx.restore();
+                return;
+            }
+
+            // --- LLAMA BLANCA (Diseño Clásico Geométrico) ---
+            
             // Cuerpo
-            ctx.fillStyle = this.color;
+            ctx.fillStyle = '#FFFFFF';
             ctx.fillRect(-20, -10, 40, 20);
             
+            // Cuello y Cabeza
+            ctx.fillRect(10, -30, 10, 30);
+            
+            // Orejas
+            ctx.fillStyle = '#333';
+            ctx.fillRect(12, -35, 3, 8);
+            ctx.fillRect(17, -35, 3, 8);
+
+            // Gafas
+            ctx.fillStyle = '#000';
+            ctx.fillRect(13, -25, 6, 4); 
+            
             // Patas
+            ctx.fillStyle = '#EEE'; 
             if (Math.abs(this.vx) > 0.5 && !this.grounded === false) {
                 const walk = Math.sin(Date.now() / 100) * 10;
                 ctx.fillRect(-18 + walk, 10, 8, 15);
@@ -226,24 +312,12 @@
                 ctx.fillRect(10, 10, 8, 15);
             }
 
-            // Cuello/Cabeza
-            ctx.fillRect(10, -30, 10, 30);
-            // Orejas
-            ctx.fillStyle = '#5D4037';
-            ctx.fillRect(12, -35, 3, 8);
-            ctx.fillRect(17, -35, 3, 8);
-            // Ojo
-            ctx.fillStyle = 'white';
-            ctx.fillRect(13, -25, 4, 4);
-            ctx.fillStyle = 'black';
-            ctx.fillRect(15, -25, 2, 2);
-            
-            // Manta peruana
-            ctx.fillStyle = '#E91E63'; 
+            // Manta Cyber
+            ctx.fillStyle = PALETTE.accentRed; 
             ctx.fillRect(-10, -10, 5, 20);
-            ctx.fillStyle = '#FFEB3B'; 
+            ctx.fillStyle = PALETTE.accentYellow; 
             ctx.fillRect(-5, -10, 5, 20);
-            ctx.fillStyle = '#2196F3'; 
+            ctx.fillStyle = '#333'; 
             ctx.fillRect(0, -10, 5, 20);
 
             ctx.restore();
@@ -260,21 +334,9 @@
                 const oX = hWidths - Math.abs(vX);
                 const oY = hHeights - Math.abs(vY);
                 if (oX >= oY) {
-                    if (vY > 0) {
-                        colDir = "t"; 
-                        shapeA.y += oY;
-                    } else {
-                        colDir = "b"; 
-                        shapeA.y -= oY;
-                    }
+                    if (vY > 0) { colDir = "t"; shapeA.y += oY; } else { colDir = "b"; shapeA.y -= oY; }
                 } else {
-                    if (vX > 0) {
-                        colDir = "l";
-                        shapeA.x += oX;
-                    } else {
-                        colDir = "r";
-                        shapeA.x -= oX;
-                    }
+                    if (vX > 0) { colDir = "l"; shapeA.x += oX; } else { colDir = "r"; shapeA.x -= oX; }
                 }
             }
             return colDir;
@@ -284,72 +346,45 @@
     let player = new Player();
     let platforms = [];
     let letters = [];
+    let particles = []; 
     let cameraX = 0;
 
     function initLevel() {
         platforms = [];
         letters = [];
+        particles = [];
+        lives = MAX_LIVES;
         gameEnded = false;
         collectedIndices.clear();
         gameStartTime = Date.now();
+        
         document.getElementById('win-screen').style.display = 'none';
+        document.getElementById('lose-screen').style.display = 'none';
+        updateLivesUI();
 
-        // Suelo Base Seguro (Primer tramo)
-        platforms.push({ x: 0, y: GAME_HEIGHT - 40, width: 800, height: 40, color: '#4CAF50' });
+        platforms.push({ x: 0, y: GAME_HEIGHT - 40, width: 600, height: 40 });
 
-        const phrase = "IAHACKATONPERU".split('');
-        let currentX = 600; 
+        const phrase = TARGET_PHRASE;
+        let currentX = 500; 
 
         phrase.forEach((char, index) => {
-            // Gap reducido para facilitar saltos (entre 250 y 400 pixels)
-            // Antes era 400-600, lo cual era difícil para el salto de la llama
-            const gap = 250 + Math.random() * 150; 
+            const gap = 200 + Math.random() * 150; 
             currentX += gap;
-
-            const yPos = 180 + Math.random() * 100; // Altura más controlada
+            const yPos = 150 + Math.random() * 150; 
             
-            // Plataforma Principal de la letra
-            platforms.push({ 
-                x: currentX - 60, 
-                y: yPos + 40, 
-                width: 140, // Plataforma más ancha para aterrizar seguro
-                height: 20, 
-                color: '#8D6E63' 
-            });
-
-            // Plataformas intermedias de "puente" si el salto es muy largo
-            if (gap > 350) {
-                platforms.push({
-                    x: currentX - (gap/2) - 40,
-                    y: yPos + 80 + (Math.random()*20),
-                    width: 80,
-                    height: 20,
-                    color: '#8D6E63'
-                });
+            platforms.push({ x: currentX - 50, y: yPos + 40, width: 100, height: 20 });
+            if (gap > 300 || yPos < 150) {
+                 platforms.push({ x: currentX - (gap/2) - 40, y: yPos + 100, width: 60, height: 20 });
             }
-            
             letters.push({
-                char: char,
-                targetIndex: index,
-                x: currentX - 10,
-                y: yPos,
-                width: 30,
-                height: 30,
-                collected: false
+                char: char, targetIndex: index, x: currentX - 10, y: yPos, width: 20, height: 20, collected: false
             });
         });
 
-        // Zona Final (Bandera)
-        const finalX = currentX + 400;
-        platforms.push({ x: finalX, y: GAME_HEIGHT - 60, width: 400, height: 60, color: '#FFD700' }); // Suelo dorado final
-        
-        finalFlag = {
-            x: finalX + 200,
-            y: GAME_HEIGHT - 60,
-            reached: false
-        };
+        const finalX = currentX + 300;
+        platforms.push({ x: finalX, y: GAME_HEIGHT - 60, width: 400, height: 60 }); 
+        finalFlag = { x: finalX + 200, y: GAME_HEIGHT - 60 };
 
-        // UI Inicial
         const uiContainer = document.getElementById('letters-container');
         uiContainer.innerHTML = '';
         TARGET_PHRASE.forEach((char, i) => {
@@ -361,29 +396,47 @@
         });
     }
 
+    function loseLife() {
+        lives--;
+        updateLivesUI();
+        const flash = document.createElement('div');
+        flash.style.position = 'absolute';
+        flash.style.top = 0; flash.style.left = 0; flash.style.width = '100%'; flash.style.height = '100%';
+        flash.style.background = 'rgba(255, 0, 51, 0.3)';
+        document.body.appendChild(flash);
+        setTimeout(() => flash.remove(), 100);
+        if (lives <= 0) finishGame(false);
+        else player.respawn();
+    }
+
+    function updateLivesUI() {
+        const container = document.getElementById('lives-display');
+        container.innerHTML = '';
+        for (let i = 0; i < MAX_LIVES; i++) {
+            const heart = document.createElement('div');
+            heart.className = 'heart' + (i >= lives ? ' lost' : '');
+            container.appendChild(heart);
+        }
+    }
+
     function update() {
         if (!gameEnded) {
-            // Actualizar Timer
             const now = Date.now();
             const diff = (now - gameStartTime) / 1000;
-            timerDisplay.innerText = diff.toFixed(2) + "s";
+            document.getElementById('timer-display').innerText = "TIME: " + diff.toFixed(2);
         }
-
         player.update();
-
-        // Cámara
+        
         cameraX = player.x - 200;
         if (cameraX < 0) cameraX = 0;
         if (cameraX > WORLD_WIDTH - VIEWPORT_WIDTH) cameraX = WORLD_WIDTH - VIEWPORT_WIDTH;
 
-        // Colisión Letras
         letters.forEach(letter => {
             if (!letter.collected) {
                 if (player.x < letter.x + letter.width &&
                     player.x + player.width > letter.x &&
                     player.y < letter.y + letter.height &&
                     player.y + player.height > letter.y) {
-                    
                     collectLetter(letter);
                 }
             }
@@ -394,132 +447,118 @@
         if(letter.collected) return;
         letter.collected = true;
         collectedIndices.add(letter.targetIndex);
+        document.getElementById(`slot-${letter.targetIndex}`).classList.add('collected');
         
-        const slot = document.getElementById(`slot-${letter.targetIndex}`);
-        slot.classList.add('collected');
+        for(let i=0; i<8; i++) {
+            particles.push({
+                x: letter.x + 10, y: letter.y + 10,
+                vx: (Math.random() - 0.5) * 10, vy: (Math.random() - 0.5) * 10,
+                life: 30, color: PALETTE.accentYellow
+            });
+        }
     }
 
-    function finishGame() {
+    function finishGame(win) {
         if (gameEnded) return;
         gameEnded = true;
-        
-        // Calcular tiempo final
-        const now = Date.now();
-        const diff = (now - gameStartTime) / 1000;
-        
-        document.getElementById('final-time').innerText = "Tiempo Final: " + diff.toFixed(2) + "s";
-        document.getElementById('win-screen').style.display = 'block';
-    }
-
-    function drawFlag(x, y) {
-        // Mástil
-        ctx.fillStyle = '#555';
-        ctx.fillRect(x, y - 150, 5, 150);
-        
-        // Base
-        ctx.fillStyle = '#333';
-        ctx.fillRect(x - 10, y, 25, 10);
-
-        // Bandera Peruana
-        const wave = Math.sin(Date.now() / 200) * 5; // Efecto de viento
-        const flagY = y - 150;
-        const flagH = 60;
-        const stripeW = 30;
-
-        // Franja Roja 1
-        ctx.fillStyle = '#D91023';
-        ctx.fillRect(x + 5, flagY, stripeW, flagH + wave);
-        
-        // Franja Blanca
-        ctx.fillStyle = '#FFFFFF';
-        ctx.fillRect(x + 5 + stripeW, flagY + (wave*0.5), stripeW, flagH + wave);
-        
-        // Franja Roja 2
-        ctx.fillStyle = '#D91023';
-        ctx.fillRect(x + 5 + (stripeW*2), flagY + wave, stripeW, flagH + wave);
-    }
-
-    function drawBackground() {
-        const parallaxX = cameraX * 0.2;
-        ctx.fillStyle = '#455A64'; 
-        ctx.beginPath();
-        ctx.moveTo(0, GAME_HEIGHT);
-        for(let i=0; i < WORLD_WIDTH + VIEWPORT_WIDTH; i+= 200) {
-            const h = 200 + Math.sin(i * 0.01) * 100;
-            ctx.lineTo(i - parallaxX, GAME_HEIGHT - h);
+        if (win) {
+            const now = Date.now();
+            const diff = (now - gameStartTime) / 1000;
+            document.getElementById('final-time').innerText = "TIME: " + diff.toFixed(2) + "s";
+            document.getElementById('win-screen').style.display = 'block';
+        } else {
+            document.getElementById('lose-screen').style.display = 'block';
         }
-        ctx.lineTo(WORLD_WIDTH, GAME_HEIGHT);
-        ctx.fill();
+    }
 
-        // Ruinas
-        const ruinX = cameraX * 0.5;
-        ctx.fillStyle = '#5D4037'; 
-        for (let i = 100; i < WORLD_WIDTH; i+= 500) {
-            if (i > cameraX - 100 && i < cameraX + VIEWPORT_WIDTH + 100) {
-                 const xPos = i - ruinX + (i*0.3);
-                 ctx.fillRect(xPos, GAME_HEIGHT - 150, 200, 150);
-                 ctx.fillStyle = '#795548';
-                 ctx.fillRect(xPos + 10, GAME_HEIGHT - 130, 180, 20);
-                 ctx.fillRect(xPos + 20, GAME_HEIGHT - 110, 160, 20);
-                 ctx.fillStyle = '#8D6E63';
-                 ctx.beginPath();
-                 ctx.moveTo(xPos + 50, GAME_HEIGHT - 150);
-                 ctx.lineTo(xPos + 100, GAME_HEIGHT - 200); 
-                 ctx.lineTo(xPos + 150, GAME_HEIGHT - 150);
-                 ctx.fill();
-                 ctx.fillStyle = '#5D4037'; 
+    // --- CORRECCIÓN DEL FONDO (PARALLAX FIX) ---
+    function drawMountainParticles() {
+        // Iteramos sobre el ancho de la PANTALLA (0 a 800)
+        // en lugar de usar coordenadas de mundo que se salían de cuadro.
+        for(let screenX = 0; screenX <= VIEWPORT_WIDTH; screenX += 10) {
+            
+            // Calculamos qué parte del "mundo" estamos viendo para el ruido
+            // Multiplicamos por 0.2 para que se mueva lento (efecto lejanía)
+            let worldNoiseX = screenX + (cameraX * 0.2); 
+
+            // Función de altura procedural
+            let h = 150 + Math.sin(worldNoiseX * 0.005) * 100;
+            
+            // Variaciones para simular ruinas
+            if (Math.sin(worldNoiseX * 0.01) > 0.5) h += 50; 
+            if (Math.sin(worldNoiseX * 0.03) > 0.8) h += 30;
+
+            // Dibujamos la columna de puntos
+            ctx.fillStyle = PALETTE.mountainDots;
+            for(let y = GAME_HEIGHT - h; y < GAME_HEIGHT; y += 12) {
+                // Dibujar punto
+                ctx.fillRect(Math.floor(screenX), Math.floor(y), 2, 2);
             }
         }
     }
 
     function draw() {
         ctx.clearRect(0, 0, canvas.width, canvas.height);
-        drawBackground();
+        
+        // 1. Fondo
+        ctx.fillStyle = PALETTE.bg;
+        ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+        // 2. Montañas
+        drawMountainParticles();
 
         ctx.save();
         ctx.translate(-cameraX, 0);
 
         // Plataformas
         platforms.forEach(p => {
-            ctx.fillStyle = p.color;
+            ctx.fillStyle = PALETTE.platform;
             ctx.fillRect(p.x, p.y, p.width, p.height);
-            if (p.color === '#4CAF50') {
-                ctx.fillStyle = '#388E3C';
-                ctx.fillRect(p.x, p.y, p.width, 5); 
-            } else if (p.color === '#8D6E63') {
-                ctx.fillStyle = '#5D4037';
-                ctx.fillRect(p.x, p.y, p.width, 2);
-                ctx.fillRect(p.x, p.y + 10, p.width, 2);
-            }
+            ctx.fillStyle = PALETTE.platformShadow;
+            ctx.fillRect(p.x, p.y + p.height - 5, p.width, 5);
+            ctx.fillStyle = PALETTE.accentYellow;
+            ctx.fillRect(p.x, p.y + 10, 5, 5);
         });
 
-        // Bandera Final
-        drawFlag(finalFlag.x, finalFlag.y);
+        // Bandera
+        ctx.fillStyle = '#555';
+        ctx.fillRect(finalFlag.x, finalFlag.y - 120, 4, 120);
+        const wave = Math.sin(Date.now() / 200) * 5;
+        // Bandera Perú Neon
+        ctx.fillStyle = 'rgba(255, 0, 51, 0.8)';
+        ctx.fillRect(finalFlag.x + 4, finalFlag.y - 120, 20, 40 + wave); 
+        ctx.fillStyle = 'rgba(255, 255, 255, 0.9)';
+        ctx.fillRect(finalFlag.x + 24, finalFlag.y - 120 + (wave*0.5), 20, 40 + wave); 
+        ctx.fillStyle = 'rgba(255, 0, 51, 0.8)';
+        ctx.fillRect(finalFlag.x + 44, finalFlag.y - 120 + wave, 20, 40 + wave);
 
         // Letras
-        ctx.font = "bold 24px Arial";
+        ctx.font = "bold 20px 'Courier New'"; 
         ctx.textAlign = "center";
         letters.forEach(l => {
             if (!l.collected) {
-                const floatY = Math.sin(Date.now() / 200) * 5;
-                ctx.fillStyle = 'rgba(255, 215, 0, 0.5)';
-                ctx.beginPath();
-                ctx.arc(l.x + 15, l.y + 15 + floatY, 25, 0, Math.PI * 2);
-                ctx.fill();
-                ctx.fillStyle = 'yellow';
-                ctx.beginPath();
-                ctx.arc(l.x + 15, l.y + 15 + floatY, 20, 0, Math.PI * 2);
-                ctx.fill();
-                ctx.fillStyle = 'black';
-                ctx.fillText(l.char, l.x + 15, l.y + 24 + floatY);
+                const floatY = Math.sin(Date.now() / 150) * 5;
+                ctx.shadowColor = PALETTE.accentYellow;
+                ctx.shadowBlur = 10;
+                ctx.fillStyle = PALETTE.text;
+                ctx.fillText(l.char, l.x + 10, l.y + floatY + 15);
+                ctx.shadowBlur = 0;
             }
         });
 
-        // Indicador sobre el jugador si faltan letras
+        // Partículas
+        particles.forEach((p, index) => {
+            p.life--;
+            p.x += p.vx;
+            p.y += p.vy;
+            ctx.fillStyle = p.color;
+            ctx.fillRect(p.x, p.y, 3, 3);
+            if(p.life <= 0) particles.splice(index, 1);
+        });
+
         if (player.x + player.width > finalFlag.x - 300 && collectedIndices.size < TARGET_PHRASE.length) {
-            ctx.fillStyle = "white";
-            ctx.font = "14px Arial";
-            ctx.fillText("¡Faltan letras!", player.x + 20, player.y - 20);
+            ctx.fillStyle = PALETTE.accentRed;
+            ctx.fillText("DATA MISSING", player.x + 20, player.y - 30);
         }
 
         player.draw();
@@ -527,12 +566,14 @@
         
         requestAnimationFrame(loop);
     }
-
+    
+    // Función del bucle principal restaurada
     function loop() {
         update();
         draw();
     }
 
+    // Inputs
     window.addEventListener('keydown', e => {
         if(keys.hasOwnProperty(e.code) || e.code === 'Space') {
             keys[e.code === 'Space' ? 'Space' : e.code] = true;
@@ -546,6 +587,7 @@
         }
     });
 
+    // Iniciar
     initLevel();
     loop();
 
