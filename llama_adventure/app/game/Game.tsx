@@ -328,73 +328,73 @@ export default function Game({ onShowLeaderboard, currentUserId }: GameProps = {
     window.addEventListener('orientationchange', checkMobile);
 
     const handleKeyDown = (e: KeyboardEvent) => {
-      // Debug mode shortcuts
-      if (e.key.toLowerCase() === 'd' && e.ctrlKey) {
-        setDebugMode(prev => !prev);
-        return;
-      }
+      // Debug mode shortcuts - DISABLED to prevent game hacking
+      // if (e.key.toLowerCase() === 'd' && e.ctrlKey) {
+      //   setDebugMode(prev => !prev);
+      //   return;
+      // }
 
-      if (debugMode && gameStateRef.current === "PLAYING") {
-        if (e.key.toLowerCase() === 'n') {
-          // Skip to next level
-          const currentIndex = LEVELS.indexOf(currentPhraseRef.current);
-          if (currentIndex < LEVELS.length - 1) {
-            startGame(LEVELS[currentIndex + 1]);
-          }
-          return;
-        }
-        if (e.key.toLowerCase() === 'c') {
-          // Collect all letters
-          const allIndices = new Set<number>();
-          currentPhraseArrayRef.current.forEach((char, i) => {
-            if (char !== ' ') {
-              allIndices.add(i);
-              updateSlot(i);
-            }
-          });
-          collectedIndicesRef.current = allIndices;
-          setCollectedIndices(allIndices);
-          
-          // Collect all mystery boxes
-          mysteryBoxesRef.current.forEach(box => {
-            if (box.active) {
-              triggerMysteryBox(box, particlesRef.current, allIndices, updateSlot);
-            }
-          });
-          
-          // Collect all letters
-          lettersRef.current.forEach(letter => {
-            if (!letter.collected) {
-              collectLetter(letter, particlesRef.current, allIndices, updateSlot);
-            }
-          });
-          return;
-        }
-        if (e.key.toLowerCase() === 't') {
-          // Teleport to end flag
-          playerRef.current.x = finalFlagRef.current.x - 50;
-          playerRef.current.y = finalFlagRef.current.y - 100;
-          playerRef.current.vx = 0;
-          playerRef.current.vy = 0;
-          return;
-        }
-        if (e.key.toLowerCase() === 'f') {
-          // Finish level instantly
-          const allIndices = new Set<number>();
-          currentPhraseArrayRef.current.forEach((char, i) => {
-            if (char !== ' ') {
-              allIndices.add(i);
-              updateSlot(i);
-            }
-          });
-          collectedIndicesRef.current = allIndices;
-          setCollectedIndices(allIndices);
-          playerRef.current.x = finalFlagRef.current.x - 50;
-          playerRef.current.y = finalFlagRef.current.y - 50;
-          finishGame(true);
-          return;
-        }
-      }
+      // if (debugMode && gameStateRef.current === "PLAYING") {
+      //   if (e.key.toLowerCase() === 'n') {
+      //     // Skip to next level
+      //     const currentIndex = LEVELS.indexOf(currentPhraseRef.current);
+      //     if (currentIndex < LEVELS.length - 1) {
+      //       startGame(LEVELS[currentIndex + 1]);
+      //     }
+      //     return;
+      //   }
+      //   if (e.key.toLowerCase() === 'c') {
+      //     // Collect all letters
+      //     const allIndices = new Set<number>();
+      //     currentPhraseArrayRef.current.forEach((char, i) => {
+      //       if (char !== ' ') {
+      //         allIndices.add(i);
+      //         updateSlot(i);
+      //       }
+      //     });
+      //     collectedIndicesRef.current = allIndices;
+      //     setCollectedIndices(allIndices);
+      //     
+      //     // Collect all mystery boxes
+      //     mysteryBoxesRef.current.forEach(box => {
+      //       if (box.active) {
+      //         triggerMysteryBox(box, particlesRef.current, allIndices, updateSlot);
+      //       }
+      //     });
+      //     
+      //     // Collect all letters
+      //     lettersRef.current.forEach(letter => {
+      //       if (!letter.collected) {
+      //         collectLetter(letter, particlesRef.current, allIndices, updateSlot);
+      //       }
+      //     });
+      //     return;
+      //   }
+      //   if (e.key.toLowerCase() === 't') {
+      //     // Teleport to end flag
+      //     playerRef.current.x = finalFlagRef.current.x - 50;
+      //     playerRef.current.y = finalFlagRef.current.y - 100;
+      //     playerRef.current.vx = 0;
+      //     playerRef.current.vy = 0;
+      //     return;
+      //   }
+      //   if (e.key.toLowerCase() === 'f') {
+      //     // Finish level instantly
+      //     const allIndices = new Set<number>();
+      //     currentPhraseArrayRef.current.forEach((char, i) => {
+      //       if (char !== ' ') {
+      //         allIndices.add(i);
+      //         updateSlot(i);
+      //       }
+      //     });
+      //     collectedIndicesRef.current = allIndices;
+      //     setCollectedIndices(allIndices);
+      //     playerRef.current.x = finalFlagRef.current.x - 50;
+      //     playerRef.current.y = finalFlagRef.current.y - 50;
+      //     finishGame(true);
+      //     return;
+      //   }
+      // }
 
       if (keysRef.current.hasOwnProperty(e.code) || e.code === 'Space') {
         keysRef.current[e.code === 'Space' ? 'Space' : e.code] = true;
@@ -464,7 +464,8 @@ export default function Game({ onShowLeaderboard, currentUserId }: GameProps = {
             <div id="lives-display"></div>
             <div id="timer-display">TIME: 0.00</div>
           </div>
-          {debugMode && (
+          {/* Debug mode UI - DISABLED to prevent game hacking */}
+          {/* {debugMode && (
             <div style={{
               position: 'absolute',
               top: '10px',
@@ -483,7 +484,7 @@ export default function Game({ onShowLeaderboard, currentUserId }: GameProps = {
               [T] Teleport End<br/>
               [F] Finish Level
             </div>
-          )}
+          )} */}
         </div>
 
         <div id="main-menu" className={`screen-overlay ${gameState === "MENU" ? '' : 'hidden'}`}>
@@ -566,7 +567,8 @@ export default function Game({ onShowLeaderboard, currentUserId }: GameProps = {
       )}
       <div id="controls-hint" className={isMobile ? 'mobile-hidden' : ''}>
         [FLECHAS] MOVER • [ESPACIO] SALTAR
-        {debugMode && <span style={{ color: '#ff0000', marginLeft: '10px' }}>• DEBUG: CTRL+D</span>}
+        {/* Debug mode indicator - DISABLED to prevent game hacking */}
+        {/* {debugMode && <span style={{ color: '#ff0000', marginLeft: '10px' }}>• DEBUG: CTRL+D</span>} */}
       </div>
     </div>
   );
